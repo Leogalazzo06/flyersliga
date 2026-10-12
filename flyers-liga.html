@@ -58,6 +58,22 @@
         .toast-ok { background: #0b3a66; }
         .toast-error { background: #b91c1c; }
 
+        .hidden { display: none !important; }
+
+        .tab { font-size: 0.78rem; font-weight: 800; padding: 0.45rem 1.1rem; border-radius: 9999px; color: #e0f2fe; background: rgba(255,255,255,0.16); cursor: pointer; transition: background .15s; }
+        .tab:hover { background: rgba(255,255,255,0.28); }
+        .tab-activa, .tab-activa:hover { background: #fff; color: #0673C8; }
+
+        .campo-sm { padding: 0.4rem 0.55rem; font-size: 0.78rem; border-radius: 0.6rem; }
+        .arb-dia { font-size: 0.68rem; font-weight: 800; color: #0673C8; text-transform: uppercase; letter-spacing: 0.12em; margin: 0.6rem 0 0.1rem; }
+        .arb-card { border: 1px solid #e2e8f0; border-radius: 0.9rem; padding: 0.6rem 0.65rem; background: #fff; }
+        .arb-alerta { border-color: #f59e0b; background: #fffbeb; }
+        .arb-partido { font-size: 0.8rem; font-weight: 800; color: #0f172a; line-height: 1.2; }
+        .arb-hora { font-size: 0.72rem; font-weight: 800; color: #0673C8; white-space: nowrap; }
+        .arb-detalle { font-size: 0.62rem; font-weight: 700; color: #94a3b8; margin: 0.1rem 0 0.45rem; }
+        .arb-rot { display: block; font-size: 0.6rem; font-weight: 800; color: #64748b; margin-bottom: 0.15rem; }
+        .arb-aviso { font-size: 0.64rem; font-weight: 700; color: #b45309; margin-top: 0.4rem; }
+
         :focus-visible { outline: 2px solid #0673C8; outline-offset: 2px; }
         @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
     </style>
@@ -67,16 +83,21 @@
     <header style="background: linear-gradient(110deg, #0673C8, #35A7EA);" class="text-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4">
             <h1 class="text-base sm:text-lg font-extrabold italic uppercase tracking-tight leading-none">Flyers de programación</h1>
-            <p class="text-[0.7rem] font-semibold text-sky-100 mt-1">Liga A.F.O.CH · pegá la programación y descargá los flyers de la fecha</p>
+            <p class="text-[0.7rem] font-semibold text-sky-100 mt-1">Liga A.F.O.CH · pegá la programación y descargá los flyers de la fecha o la planilla de árbitros</p>
+            <nav class="flex gap-2 mt-3" role="tablist" aria-label="Secciones">
+                <button type="button" class="tab" role="tab" data-pestana="flyers">Flyers de partidos</button>
+                <button type="button" class="tab" role="tab" data-pestana="arbitros">Árbitros</button>
+            </nav>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-5 grid gap-5 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] items-start">
+    <main id="vista-flyers" class="max-w-7xl mx-auto px-4 sm:px-6 py-5 grid gap-5 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] items-start">
 
         <!-- ============ CONTROLES ============ -->
         <div class="flex flex-col gap-4">
 
-            <section class="seccion">
+            <!-- La programación es compartida con la pestaña Árbitros (el script la mueve de lugar) -->
+            <div id="slot-prog-flyers"><section id="sec-programacion" class="seccion">
                 <div class="flex items-center justify-between gap-2 mb-3">
                     <h2 class="seccion-titulo !mb-0">Programación</h2>
                     <div class="flex gap-2">
@@ -92,7 +113,7 @@
                     Si el partido trae una etiqueta antes de los dos puntos (<b>Zona Sur Fecha 2: A Vs B</b>), se agrupan por esa etiqueta.
                     También sirve el formato con asteriscos <b>*TEXTO*</b>. Una línea con <b>---</b> corta y empieza un flyer nuevo.
                 </p>
-            </section>
+            </section></div>
 
             <section class="seccion">
                 <h2 class="seccion-titulo">Encabezado</h2>
@@ -160,6 +181,65 @@
             </div>
             <div id="previews" class="grid gap-5 justify-items-center bg-slate-50 rounded-2xl border border-slate-200 p-5" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));"></div>
             <p class="text-[0.7rem] font-semibold text-slate-400">Se descargan en PNG de 1080 px de ancho, uno por flyer. Tu trabajo se guarda solo en este navegador.</p>
+        </div>
+    </main>
+
+    <!-- ============ PESTAÑA ÁRBITROS ============ -->
+    <main id="vista-arbitros" class="hidden max-w-7xl mx-auto px-4 sm:px-6 py-5 grid gap-5 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] items-start">
+
+        <div class="flex flex-col gap-4">
+            <div id="slot-prog-arb"></div>
+
+            <section class="seccion">
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <h2 class="seccion-titulo !mb-0">Árbitros por partido</h2>
+                    <button type="button" id="btn-arb-limpiar" class="btn-sec">Borrar todo</button>
+                </div>
+                <p class="campo-ayuda !mt-0 mb-3">Los partidos salen de la programación de arriba. Cargá el árbitro principal y los asistentes de cada uno. La cancha se completa sola (la del local, la que va entre paréntesis o el "Local" del título) y la podés cambiar. Todo se guarda en este navegador.</p>
+                <div id="lista-arb" class="flex flex-col gap-2 max-h-[65vh] overflow-y-auto pr-1"></div>
+                <datalist id="dl-arbitros"></datalist>
+            </section>
+
+            <section class="seccion">
+                <h2 class="seccion-titulo">Nómina de árbitros</h2>
+                <textarea id="in-nomina" class="campo" rows="5" spellcheck="false" placeholder="Torres Leonardo&#10;Lopez Walter&#10;Montiel Daniela"></textarea>
+                <p class="campo-ayuda">Opcional: un nombre por renglón. Aparecen como sugerencias al escribir en cada partido.</p>
+            </section>
+
+            <section class="seccion">
+                <h2 class="seccion-titulo">Opciones de la planilla</h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="campo-label" for="in-anio">Año</label>
+                        <input id="in-anio" class="campo" type="number" min="2000" max="2100">
+                    </div>
+                    <div>
+                        <label class="campo-label" for="in-dia-def">Fecha si falta (dd/mm)</label>
+                        <input id="in-dia-def" class="campo" type="text" maxlength="10" placeholder="11/10">
+                    </div>
+                </div>
+                <label class="flex items-center gap-2 mt-3 text-xs font-bold text-slate-700 cursor-pointer">
+                    <input id="chk-ordenar" type="checkbox" class="accent-liga"> Ordenar los partidos de cada día por horario
+                </label>
+                <p class="campo-ayuda">Los partidos se agrupan por día (con el título "FECHA: SÁBADO 10/10/2026") y por categoría/zona. Los que no traen día en la programación usan la fecha de arriba.</p>
+            </section>
+
+            <section class="seccion">
+                <h2 class="seccion-titulo">Estilo</h2>
+                <div id="tiles-estilo-arb" class="grid grid-cols-2 gap-2"></div>
+            </section>
+        </div>
+
+        <div class="flex flex-col gap-4 min-w-0">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <p id="resumen-arb" class="text-sm font-extrabold text-slate-700"></p>
+                <button type="button" id="btn-todos-arb" class="btn-guardar">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+                    Descargar todas
+                </button>
+            </div>
+            <div id="previews-arb" class="grid gap-5 justify-items-center bg-slate-50 rounded-2xl border border-slate-200 p-5"></div>
+            <p class="text-[0.7rem] font-semibold text-slate-400">Se descargan en PNG de 2028 px de ancho, una imagen por hoja. Los días no se cortan: se juntan enteros en cada hoja hasta llenarla, y todas las hojas salen del mismo tamaño para imprimir.</p>
         </div>
     </main>
 
