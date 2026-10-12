@@ -3,6 +3,9 @@
 // Pegás la programación (formato WhatsApp) y se reparte sola en varios
 // flyers en blanco y celeste, listos para descargar en PNG.
 //
+// Pestaña "Árbitros": la misma programación se vuelve una planilla (hora, partido,
+// cancha, árbitro principal y asistentes) agrupada por día y categoría/zona.
+//
 // Depende de (cargadas en flyers-liga.html):
 //   - htmlToImage (cdn "html-to-image") -> para descargar el PNG
 //   - afoch-logo.png en la misma carpeta (o lo subís desde la página)
@@ -480,9 +483,214 @@ function htmlFlyer(pag, i, total, c) {
     </div>`;
 }
 
+// ------------------------------------------------------------
+// 4) PLANILLA DE ÁRBITROS
+//    Usa la MISMA programación que los flyers. Cada partido se completa con
+//    cancha y árbitros, y se arma una planilla (como el Excel) agrupada por
+//    día y por categoría/zona, lista para descargar en PNG.
+// ------------------------------------------------------------
+const DIAS_NOMBRE = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+const ABREV_A_NOMBRE = { LUN: 'LUNES', MAR: 'MARTES', 'MIÉ': 'MIÉRCOLES', JUE: 'JUEVES', VIE: 'VIERNES', 'SÁB': 'SÁBADO', DOM: 'DOMINGO' };
+
+// Medidas de la planilla (px de diseño). Se exporta a 1,5x.
+const A = { ancho: 1352, dia: 36, banda: 28, head: 28, fila: 29, cap: 1000, max: 1400, pie: 26 };   // cap: alto objetivo de una hoja (≈ A4 apaisada); max: un día solo se corta si pasa de este alto
+const ARB_RATIO = 1.5;
+const COLS_ARB = [96, 222, 334, 168, 172, 176, 176];   // suman 1344 + 6 separadores + 2 bordes = 1352
+const TITULOS_COLS = ['Hora', 'Detalle / Etapa', 'Partido / Encuentro', 'Estadio / Cancha', 'Árbitro Principal', 'Asistente 1', 'Asistente 2'];
+
+// Colores de la planilla: "excel" imita la planilla actual; el resto reutiliza los diseños de los flyers
+function paletaPlanilla(id) {
+    if (id === 'excel' || !DISENOS[id]) {
+        return { fondo: '#FFFFFF', titBg: '#DDE3EC', titTxt: '#111827', bandBg: '#F3F6FB', bandTxt: '#2E75B6',
+                 headBg: '#2B4F82', headTxt: '#FFFFFF', rowA: '#FFFFFF', rowB: '#F3F6FB', borde: '#D5DCE8', txt: '#111827' };
+    }
+    const c = { ...BASE_COLORES, ...DISENOS[id].colores };
+    return { fondo: c.fondo, titBg: c.celesteSuave, titTxt: c.tinta, bandBg: c.celesteFondo, bandTxt: c.acento,
+             headBg: c.cabA, headTxt: c.cabTexto, rowA: c.fondo, rowB: c.celesteFondo, borde: c.celesteSuave, txt: c.tinta };
+}
+
+function tituloCase(s) {
+    s = String(s || '').trim();
+    if (s && s === s.toUpperCase() && s !== s.toLowerCase()) {
+        s = s.toLowerCase().replace(/(^|[\s.\-/(])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()).replace(/\bFc\b/g, 'FC');
+    }
+    return s;
+}
+
+// "Veteranos +40 · LOCAL AVENIDA FC FECHA 5"  o  "Sábado - Dep. Comercio (Local)"  ->  cancha donde se juegan todos
+function sedeDeTitulo(txt) {
+    txt = String(txt || '');
+    let m = txt.match(/\blocal\b\s*:?\s*([^()·]+?)(?:\s+fecha\b[^·]*)?\s*(?:[·)]|$)/i);
+    if (m && m[1].trim()) return tituloCase(m[1]);
+    m = txt.match(/([^()·\-–—]+?)\s*\(\s*local\s*\)/i);
+    return m ? tituloCase(m[1]) : '';
+}
+
+// Día del partido -> { key (para ordenar), label ("SÁBADO 10/10/2026") }
+function fechaDe(dia, opts) {
+    let y = Number(opts.anio) || new Date().getFullYear();
+    let dd = '', mm = '';
+    const m = String(dia || '').match(/(\d{1,2})\/(\d{1,2})/);
+    if (m) { dd = m[1].padStart(2, '0'); mm = m[2].padStart(2, '0'); }
+    else if (opts.diaDefault) {
+        const d = String(opts.diaDefault).match(/^\s*(\d{1,2})\s*\/\s*(\d{1,2})(?:\s*\/\s*(\d{2,4}))?\s*$/);
+        if (d) {
+            dd = d[1].padStart(2, '0'); mm = d[2].padStart(2, '0');
+            if (d[3]) y = d[3].length === 2 ? 2000 + Number(d[3]) : Number(d[3]);
+        }
+    }
+    if (dd) {
+        const f = new Date(y, Number(mm) - 1, Number(dd));
+        return { key: `${y}-${mm}-${dd}`, label: `${DIAS_NOMBRE[f.getDay()]} ${dd}/${mm}/${y}` };
+    }
+    const ab = String(dia || '').trim().toUpperCase();
+    if (ABREV_A_NOMBRE[ab]) return { key: `0-${ABREV_A_NOMBRE[ab]}`, label: ABREV_A_NOMBRE[ab] };
+    return { key: 'zzzz', label: '' };
+}
+
+// "Jornada Promocional (Sede Atl. Alvear)" -> "Atl. Alvear"
+function notaEnTexto(txt) {
+    const m = String(txt || '').match(/\(\s*(?:(?:sede|cancha|en)\s*:?\s+)?([^)]{2,40}?)\s*\)/i);
+    return m ? m[1].trim() : '';
+}
+
+// bloques (del parser de flyers) -> lista plana de partidos, ordenada por día y horario
+function armarPartidos(bloques, opts = {}) {
+    const lista = [], vistos = {};
+    let n = 0;
+    bloques.forEach(b => {
+        const sede = sedeDeTitulo([b.cat, b.zona].filter(Boolean).join(' · '));
+        const detalle = (b.zona && /^(zona|fecha|grupo)\b/i.test(b.zona)) ? b.zona : (b.cat || b.zona || '');
+        const bandaTxt = [b.cat, b.zona].filter(Boolean).join(' - ');
+        b.filas.forEach(f => {
+            const partido = f.l ? `${f.l} vs. ${f.v}` : f.texto;
+            let key = `${partido}|${f.dia || ''}`.toLowerCase().replace(/\s+/g, ' ');
+            vistos[key] = (vistos[key] || 0) + 1;
+            if (vistos[key] > 1) key += `#${vistos[key]}`;
+            const fecha = fechaDe(f.dia, opts);
+            lista.push({
+                key, idx: n++, partido, hora: f.hora || '', pend: !!f.pend,
+                fechaKey: fecha.key, fechaLabel: fecha.label,
+                detalle, bandaTxt: (bandaTxt || 'GENERAL').toUpperCase(),
+                banda: `CATEGORÍA / ZONA: ${(bandaTxt || 'GENERAL').toUpperCase()}`,
+                canchaAuto: f.nota || notaEnTexto(f.texto) || sede || f.l || '',
+            });
+        });
+    });
+    const horaOrd = (h) => /^\d{1,2}:\d{2}$/.test(h) ? h.padStart(5, '0') : '99:99';
+    lista.sort((a, b) => {
+        if (a.fechaKey !== b.fechaKey) return a.fechaKey < b.fechaKey ? -1 : 1;
+        if (opts.ordenar !== false) {
+            const ha = horaOrd(a.hora), hb = horaOrd(b.hora);
+            if (ha !== hb) return ha < hb ? -1 : 1;
+        }
+        return a.idx - b.idx;
+    });
+    return lista;
+}
+
+// partidos + asignaciones -> días > bandas (categoría/zona) > filas
+function agruparDias(partidos, asig) {
+    const dias = [];
+    partidos.forEach(p => {
+        let d = dias[dias.length - 1];
+        if (!d || d.key !== p.fechaKey) { d = { key: p.fechaKey, label: p.fechaLabel, bandas: [] }; dias.push(d); }
+        let b = d.bandas[d.bandas.length - 1];
+        if (!b || b.label !== p.banda) { b = { label: p.banda, filas: [] }; d.bandas.push(b); }
+        const a = (asig && asig[p.key]) || {};
+        const t = (v) => String(v || '').trim();
+        b.filas.push({
+            hora: p.hora, pend: p.pend, detalle: p.detalle, partido: p.partido,
+            cancha: t(a.cancha) || p.canchaAuto, ap: t(a.ap), a1: t(a.a1), a2: t(a.a2),
+        });
+    });
+    if (dias.length > 1) dias.forEach(d => { if (!d.label) d.label = 'SIN FECHA DEFINIDA'; });
+    return dias;
+}
+
+// Reparte en hojas: junta días enteros hasta llenar la hoja (si un día es larguísimo, repite el título y la banda al cortar)
+function paginarPlanilla(dias, cap) {
+    const pags = [];
+    let pag = null;
+    const nueva = () => { pag = { items: [], usado: 0, dia: null, banda: null }; pags.push(pag); };
+    dias.forEach(d => {
+      // Un día nunca se corta si entra entero en una hoja: se acomoda en la actual o abre otra
+      const altoDia = (d.label ? A.dia : 0) + d.bandas.reduce((a, b) => a + A.banda + A.head + b.filas.length * A.fila, 0);
+      if (pag && pag.items.length && pag.usado + altoDia > cap) nueva();
+      d.bandas.forEach(b => {
+        let i = 0;
+        while (i < b.filas.length) {
+            if (!pag) nueva();
+            const nd = !!d.label && pag.dia !== d;
+            const nb = pag.banda !== b;
+            const cab = (nd ? A.dia : 0) + (nb ? A.banda + A.head : 0);
+            if (pag.items.length && pag.usado + cab + A.fila > A.max) { nueva(); continue; }
+            if (nd) { pag.items.push({ t: 'dia', txt: d.label }); pag.usado += A.dia; pag.dia = d; }
+            if (nb) {
+                pag.items.push({ t: 'banda', txt: b.label }, { t: 'head' });
+                pag.usado += A.banda + A.head; pag.banda = b;
+            }
+            let primera = true;
+            while (i < b.filas.length && (primera || pag.usado + A.fila <= A.max)) {
+                pag.items.push({ t: 'fila', ...b.filas[i] });
+                pag.usado += A.fila; i++; primera = false;
+            }
+            if (i < b.filas.length) nueva();
+        }
+      });
+    });
+    return pags;
+}
+
+// Misma cantidad de hojas, pero parejas (la última no queda casi vacía)
+function repartirPlanilla(dias, cap) {
+    const base = paginarPlanilla(dias, cap);
+    const n = base.length;
+    if (n <= 1) return base;
+    let lo = Math.floor(cap * 0.3), hi = cap, mejor = base;
+    while (hi - lo > 1) {
+        const mid = Math.floor((lo + hi) / 2);
+        const p = paginarPlanilla(dias, mid);
+        if (p.length === n) { hi = mid; mejor = p; } else { lo = mid; }
+    }
+    return mejor;
+}
+
+function htmlPlanilla(pag, i, total, c) {
+    const p = c.paleta, W = COLS_ARB;
+    const grid = `display:grid; grid-template-columns:${W.map(w => w + 'px').join(' ')}; gap:1px; padding:0 1px 1px; box-sizing:border-box; width:${A.ancho}px;`;
+    const celda = (txt, w, o) => `<div style="background:${o.bg}; display:flex; align-items:center; justify-content:${o.j || 'flex-start'}; padding:0 8px; overflow:hidden; box-sizing:border-box;"><span style="font-family:${TEXTO}; font-weight:${o.w || 600}; font-size:${px(ajustar(txt, o.t || 22, w - 16, 0.41))}; line-height:1; color:${o.c}; white-space:nowrap;">${esc(txt)}</span></div>`;
+    let nFila = 0;
+    const items = pag.items.map(it => {
+        if (it.t === 'dia') {
+            return `<div style="height:${A.dia}px; width:${A.ancho}px; background:${p.titBg}; color:${p.titTxt}; font-family:${TEXTO}; font-weight:800; font-size:34px; line-height:${A.dia}px; text-align:center; white-space:nowrap; text-transform:uppercase; box-sizing:border-box;">FECHA: ${esc(it.txt)}</div>`;
+        }
+        if (it.t === 'banda') {
+            return `<div style="height:${A.banda}px; width:${A.ancho}px; background:${p.bandBg}; display:flex; align-items:center; padding:0 14px; box-sizing:border-box;"><span style="font-family:${TEXTO}; font-weight:700; font-size:${px(ajustar(it.txt, 23, A.ancho - 28, 0.44))}; line-height:1; color:${p.bandTxt}; white-space:nowrap;">${esc(it.txt)}</span></div>`;
+        }
+        if (it.t === 'head') {
+            return `<div style="${grid} height:${A.head}px; background:${p.fondo};">${TITULOS_COLS.map((t, k) => celda(t, W[k], { bg: p.headBg, c: p.headTxt, w: 700, j: 'center', t: 21 })).join('')}</div>`;
+        }
+        const bg = nFila++ % 2 === 0 ? p.rowA : p.rowB;
+        const o = (extra) => ({ bg, c: p.txt, ...extra });
+        return `<div style="${grid} height:${A.fila}px; background:${p.borde};">`
+            + celda(it.hora, W[0], o({ w: 700, j: 'center' }))
+            + celda(it.detalle, W[1], o({ t: 21 }))
+            + celda(it.partido, W[2], o({ w: 800 }))
+            + celda(it.cancha, W[3], o({ j: 'center' }))
+            + celda(it.ap, W[4], o({}))
+            + celda(it.a1, W[5], o({}))
+            + celda(it.a2, W[6], o({}))
+            + `</div>`;
+    }).join('');
+    const contador = total > 1 ? `<div style="position:absolute; right:14px; bottom:3px; font-family:${TITULAR}; font-size:18px; line-height:1; letter-spacing:0.06em; color:${p.bandTxt};">${i + 1}/${total}</div>` : '';
+    return `<div data-flyer="${i}" style="position:relative; width:${A.ancho}px; height:${c.alto}px; background:${p.fondo}; overflow:hidden; font-family:${TEXTO};">${items}${contador}</div>`;
+}
+
 // Fuera del navegador (tests en Node) exportamos solo la lógica pura
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { parsearProgramacion, parsearFila, paginarCon, repartir, alturaUtil, FORMATOS, H, htmlFlyer, DISENOS, aplicarDiseno };
+    module.exports = { parsearProgramacion, parsearFila, paginarCon, repartir, alturaUtil, FORMATOS, H, htmlFlyer, DISENOS, aplicarDiseno,
+        armarPartidos, agruparDias, paginarPlanilla, repartirPlanilla, htmlPlanilla, paletaPlanilla, fechaDe, sedeDeTitulo, A };
 }
 
 // ============================================================
@@ -538,12 +746,23 @@ const ESTADO_INICIAL = {
     fecha: '',
     pie: 'A.F.O.CH',
     logoSubido: '',
+    // Pestaña de árbitros
+    pestana: 'flyers',
+    disenoArb: 'excel',
+    anio: new Date().getFullYear(),
+    diaDefault: '',
+    ordenar: true,
+    nomina: '',
+    arbitros: {},   // { clave del partido: { cancha, ap, a1, a2 } }
 };
 let estado = cargarEstado();
 let logoArchivo = null;   // logo leído de afoch-logo.png (data URL), o false si no está
 let flyersActuales = [];  // [{ nombre, nodo }] listos para exportar
 let htmlsActuales = [];   // HTML de cada flyer (para la vista ampliada)
 let visorIdx = -1;        // flyer abierto en la vista ampliada (-1 = cerrada)
+let vista = { ancho: 540, alto: 675, ratio: 2, fondo: '#FFFFFF' };   // medidas de lo que se está mostrando / exportando
+let partidosArb = [];     // partidos de la pestaña Árbitros
+let pendLista = false;    // hay que reconstruir la lista de asignación en el próximo render
 
 function cargarEstado() {
     try {
@@ -553,6 +772,10 @@ function cargarEstado() {
             if (!FORMATOS[e.formato]) e.formato = ESTADO_INICIAL.formato;
             if (!DISENOS[e.diseno]) e.diseno = ESTADO_INICIAL.diseno;
             e.logoTam = Math.max(50, Math.min(124, Number(e.logoTam) || 84));
+            if (e.pestana !== 'arbitros') e.pestana = 'flyers';
+            if (e.disenoArb !== 'excel' && !DISENOS[e.disenoArb]) e.disenoArb = 'excel';
+            if (!e.arbitros || typeof e.arbitros !== 'object' || Array.isArray(e.arbitros)) e.arbitros = {};
+            e.anio = Number(e.anio) || new Date().getFullYear();
             return e;
         }
     } catch (err) { /* storage bloqueado o JSON roto */ }
@@ -593,7 +816,7 @@ const logoActual = () => estado.logoSubido || logoArchivo || '';
 
 // ---------- Render ----------
 let temporizador = null;
-function renderDiferido() { clearTimeout(temporizador); temporizador = setTimeout(render, 160); }
+// (renderDiferido y renderActivo están más abajo, junto a la pestaña de árbitros)
 
 async function render() {
     await cargarLogoArchivo();
@@ -612,6 +835,7 @@ async function render() {
     const ESC_PREV = 270 / f.ancho;
     const htmls = paginas.map((p, i) => htmlFlyer(p, i, total, contexto));
     htmlsActuales = htmls;
+    vista = { ancho: f.ancho, alto: f.alto, ratio: ANCHO_SALIDA / f.ancho, fondo: COLOR.fondo };
 
     // Vistas previas (escaladas)
     $('previews').innerHTML = htmls.map((h, i) => `
@@ -639,7 +863,7 @@ function pintarVisor() {
     const n = htmlsActuales.length;
     if (!n) { cerrarVisor(); return; }
     visorIdx = Math.max(0, Math.min(n - 1, visorIdx));
-    const f = FORMATOS[estado.formato];
+    const f = vista;
     const esc = Math.min((window.innerWidth - 24) / f.ancho, (window.innerHeight - 96) / f.alto);
     const caja = $('visor-caja');
     caja.style.width = `${f.ancho * esc}px`;
@@ -733,16 +957,16 @@ const pausa = (ms) => new Promise(r => setTimeout(r, ms));
 
 async function generarArchivos(indices) {
     clearTimeout(temporizador);
-    await render();
-    const f = FORMATOS[estado.formato];
+    pendLista = false;
+    await renderActivo(false);
     const cssFuente = await prepararFuentes();
     const archivos = [];
     for (const i of indices) {
         const item = flyersActuales[i];
         if (!item || !item.nodo) continue;
         const opciones = {
-            pixelRatio: ANCHO_SALIDA / f.ancho,
-            backgroundColor: COLOR.fondo,
+            pixelRatio: vista.ratio,
+            backgroundColor: vista.fondo,
             style: { transform: 'none' },
             cacheBust: true,
         };
@@ -852,6 +1076,216 @@ function leerLogo(archivo) {
     lector.readAsDataURL(archivo);
 }
 
+// ---------- Pestaña ÁRBITROS ----------
+const opcionesArb = () => ({ anio: estado.anio, diaDefault: estado.diaDefault, ordenar: estado.ordenar });
+const normNombre = (s) => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+let anchoPrevArb = 0;   // ancho con el que se dibujó la vista previa de la planilla
+const hayHora = (h) => /^\d{1,2}:\d{2}$/.test(h);
+
+function renderActivo(lista = true) { return estado.pestana === 'arbitros' ? renderArb(lista) : render(); }
+function renderDiferido(lista = true) {
+    pendLista = pendLista || lista;
+    clearTimeout(temporizador);
+    temporizador = setTimeout(() => { const l = pendLista; pendLista = false; renderActivo(l); }, 160);
+}
+
+function aplicarPestana(p) {
+    const arb = p === 'arbitros';
+    if (visorIdx >= 0) cerrarVisor();
+    $('vista-flyers').classList.toggle('hidden', arb);
+    $('vista-arbitros').classList.toggle('hidden', !arb);
+    // La programación es una sola: el mismo cuadro de texto se mueve de una pestaña a la otra
+    $(arb ? 'slot-prog-arb' : 'slot-prog-flyers').appendChild($('sec-programacion'));
+    document.querySelectorAll('[data-pestana]').forEach(b => {
+        const on = b.dataset.pestana === p;
+        b.classList.toggle('tab-activa', on);
+        b.setAttribute('aria-selected', String(on));
+    });
+}
+
+function actualizarDatalist() {
+    const nombres = new Set();
+    String(estado.nomina || '').split(/\r?\n/).forEach(s => { s = s.trim(); if (s) nombres.add(s); });
+    Object.values(estado.arbitros).forEach(a => ['ap', 'a1', 'a2'].forEach(c => { const v = String((a && a[c]) || '').trim(); if (v) nombres.add(v); }));
+    $('dl-arbitros').innerHTML = [...nombres].sort((x, y) => x.localeCompare(y, 'es')).map(n => `<option value="${esc(n)}"></option>`).join('');
+}
+
+function construirListaArb() {
+    const cont = $('lista-arb');
+    actualizarDatalist();
+    if (!partidosArb.length) {
+        cont.innerHTML = '<p class="campo-ayuda">Pegá la programación para cargar los partidos.</p>';
+        return;
+    }
+    let dia = null, html = '';
+    partidosArb.forEach(p => {
+        if (p.fechaKey !== dia) {
+            dia = p.fechaKey;
+            html += `<div class="arb-dia">${esc(p.fechaLabel || 'Sin fecha definida')}</div>`;
+        }
+        const a = estado.arbitros[p.key] || {};
+        const campo = (k, rotulo, ph, lista) => `<div><span class="arb-rot">${rotulo}</span><input type="text" class="campo campo-sm" data-campo="${k}" value="${esc(a[k] || '')}" placeholder="${esc(ph)}" autocomplete="off" ${lista ? 'list="dl-arbitros"' : ''}></div>`;
+        html += `<div class="arb-card" data-pk="${esc(p.key)}">
+            <div class="flex items-baseline justify-between gap-2">
+                <span class="arb-partido">${esc(p.partido)}</span>
+                <span class="arb-hora">${esc(p.hora)}</span>
+            </div>
+            <div class="arb-detalle">${esc(p.bandaTxt)}</div>
+            <div class="mb-2">${campo('cancha', 'Cancha', p.canchaAuto || 'Cancha', false)}</div>
+            <div class="grid grid-cols-3 gap-1.5">
+                ${campo('ap', 'Principal', 'Árbitro', true)}
+                ${campo('a1', 'Asist. 1', 'Asistente 1', true)}
+                ${campo('a2', 'Asist. 2', 'Asistente 2', true)}
+            </div>
+            <p class="arb-aviso hidden">Hay un árbitro repetido en este partido o en otro a la misma hora.</p>
+        </div>`;
+    });
+    cont.innerHTML = html;
+}
+
+// Marca los partidos con un mismo árbitro dos veces, o en dos partidos del mismo día y hora
+function marcarConflictos() {
+    const mal = new Set(), enHora = {};
+    partidosArb.forEach(p => {
+        const a = estado.arbitros[p.key] || {};
+        const nombres = [a.ap, a.a1, a.a2].map(normNombre).filter(Boolean);
+        if (new Set(nombres).size < nombres.length) mal.add(p.key);
+        if (!hayHora(p.hora)) return;
+        nombres.forEach(n => { const k = `${p.fechaKey}|${p.hora}|${n}`; (enHora[k] = enHora[k] || []).push(p.key); });
+    });
+    Object.values(enHora).forEach(ks => { if (new Set(ks).size > 1) ks.forEach(k => mal.add(k)); });
+    document.querySelectorAll('#lista-arb [data-pk]').forEach(c => {
+        const m = mal.has(c.dataset.pk);
+        c.classList.toggle('arb-alerta', m);
+        c.querySelector('.arb-aviso').classList.toggle('hidden', !m);
+    });
+}
+
+async function renderArb(lista = true) {
+    partidosArb = armarPartidos(parsearProgramacion(estado.texto), opcionesArb());
+    const dias = agruparDias(partidosArb, estado.arbitros);
+    const paginas = repartirPlanilla(dias, A.cap);
+    const total = paginas.length;
+    const paleta = paletaPlanilla(estado.disenoArb);
+    const alto = Math.max(1, ...paginas.map(p => p.usado)) + (total > 1 ? A.pie : 0);
+    const n = partidosArb.length;
+    const sin = partidosArb.filter(p => !String((estado.arbitros[p.key] || {}).ap || '').trim()).length;
+
+    $('resumen-arb').textContent = n
+        ? `${n} ${n === 1 ? 'partido' : 'partidos'} → ${total} ${total === 1 ? 'hoja' : 'hojas'}${sin ? ` · ${sin} sin árbitro principal` : ''}`
+        : 'Pegá la programación para armar la planilla.';
+    $('btn-todos-arb').disabled = !total;
+
+    vista = { ancho: A.ancho, alto, ratio: ARB_RATIO, fondo: paleta.fondo };
+    const htmls = paginas.map((p, i) => htmlPlanilla(p, i, total, { paleta, alto }));
+    htmlsActuales = htmls;
+
+    const cont = $('previews-arb');
+    anchoPrevArb = cont.clientWidth;
+    const escala = Math.max(280, Math.min(900, cont.clientWidth - 42)) / A.ancho;
+    cont.innerHTML = htmls.map((h, i) => `
+        <div class="flex flex-col gap-2 items-center">
+            <div data-ver="${i}" title="Tocá para ampliar" style="width:${A.ancho * escala}px; height:${alto * escala}px; cursor:zoom-in;" class="rounded-lg overflow-hidden border border-slate-200 shadow-sm bg-white">
+                <div style="width:${A.ancho}px; height:${alto}px; transform:scale(${escala}); transform-origin: top left;">${h}</div>
+            </div>
+            <div class="flex gap-2">
+                <button type="button" data-ver="${i}" class="btn-sec">Ampliar</button>
+                <button type="button" data-descargar="${i}" class="btn-sec">Descargar ${i + 1}/${total}</button>
+            </div>
+        </div>`).join('');
+
+    $('export').innerHTML = htmls.map(h => `<div style="width:${A.ancho}px; height:${alto}px;">${h}</div>`).join('');
+    flyersActuales = paginas.map((p, i) => ({
+        nombre: `afoch-arbitros-${i + 1}de${total}.png`,
+        nodo: $('export').querySelector(`[data-flyer="${i}"]`),
+    }));
+
+    if (lista) construirListaArb();
+    marcarConflictos();
+    if (visorIdx >= 0) pintarVisor();
+}
+
+function sincronizarEstiloArb() {
+    document.querySelectorAll('[data-estilo]').forEach(b => b.classList.toggle('tile-activo', b.dataset.estilo === estado.disenoArb));
+}
+
+function iniciarArbitros() {
+    // Pestañas
+    document.querySelector('[data-pestana]').parentElement.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-pestana]');
+        if (!b || b.dataset.pestana === estado.pestana) return;
+        estado.pestana = b.dataset.pestana;
+        guardarEstado(); aplicarPestana(estado.pestana); renderActivo(true);
+    });
+
+    // Estilos de la planilla
+    const estilos = [['excel', { label: 'Planilla Excel', sub: 'Como la actual' }], ...Object.entries(DISENOS)];
+    $('tiles-estilo-arb').innerHTML = estilos.map(([k, d]) => {
+        const p = paletaPlanilla(k);
+        return `<button type="button" class="tile" data-estilo="${k}">
+            <span style="display:block; width:100%; height:1.35rem; border-radius:0.35rem; background:${p.fondo}; border:1px solid #cbd5e1; position:relative; overflow:hidden; margin-bottom:0.2rem;">
+                <span style="position:absolute; left:0; right:0; top:0; height:0.4rem; background:${p.titBg};"></span>
+                <span style="position:absolute; left:0; right:0; top:0.4rem; height:0.35rem; background:${p.headBg};"></span>
+                <span style="position:absolute; left:6px; right:6px; bottom:2px; height:0.18rem; background:${p.borde};"></span>
+            </span>
+            <span class="tile-label">${d.label}</span><span class="tile-sub">${d.sub}</span>
+        </button>`;
+    }).join('');
+    sincronizarEstiloArb();
+    $('tiles-estilo-arb').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-estilo]');
+        if (!b) return;
+        estado.disenoArb = b.dataset.estilo;
+        guardarEstado(); sincronizarEstiloArb(); renderArb(false);
+    });
+
+    // Opciones
+    $('in-anio').value = estado.anio;
+    $('in-dia-def').value = estado.diaDefault;
+    $('chk-ordenar').checked = !!estado.ordenar;
+    $('in-nomina').value = estado.nomina;
+    $('in-anio').addEventListener('input', (e) => { estado.anio = Number(e.target.value) || new Date().getFullYear(); guardarEstado(); renderDiferido(true); });
+    $('in-dia-def').addEventListener('input', (e) => { estado.diaDefault = e.target.value; guardarEstado(); renderDiferido(true); });
+    $('chk-ordenar').addEventListener('change', (e) => { estado.ordenar = e.target.checked; guardarEstado(); renderActivo(true); });
+    $('in-nomina').addEventListener('input', (e) => { estado.nomina = e.target.value; guardarEstado(); actualizarDatalist(); });
+
+    // Asignación por partido (delegación: no se reconstruye la lista mientras se escribe)
+    $('lista-arb').addEventListener('input', (e) => {
+        const inp = e.target.closest('[data-campo]');
+        if (!inp) return;
+        const pk = inp.closest('[data-pk]').dataset.pk;
+        const a = estado.arbitros[pk] || (estado.arbitros[pk] = {});
+        a[inp.dataset.campo] = inp.value;
+        guardarEstado(); marcarConflictos(); renderDiferido(false);
+    });
+    $('lista-arb').addEventListener('change', actualizarDatalist);
+    $('btn-arb-limpiar').addEventListener('click', () => {
+        if (!Object.keys(estado.arbitros).length) return;
+        if (!confirm('¿Borrar los árbitros y canchas cargados en todos los partidos?')) return;
+        estado.arbitros = {};
+        guardarEstado(); renderArb(true);
+    });
+
+    // Vista previa y descarga (mismo comportamiento que los flyers)
+    $('previews-arb').addEventListener('click', (e) => {
+        const v = e.target.closest('[data-ver]');
+        if (v) { abrirVisor(Number(v.dataset.ver)); return; }
+        const b = e.target.closest('[data-descargar]');
+        if (b) descargar([Number(b.dataset.descargar)], b);
+    });
+    $('btn-todos-arb').addEventListener('click', (e) => {
+        descargar(flyersActuales.map((_, i) => i), e.currentTarget);
+    });
+    // La vista previa se reescala sola cuando cambia el ancho disponible (rotar el celular, terminar de cargar estilos, etc.)
+    if (window.ResizeObserver) {
+        new ResizeObserver(() => {
+            const w = $('previews-arb').clientWidth;
+            if (estado.pestana !== 'arbitros' || !w || Math.abs(w - anchoPrevArb) < 4) return;
+            renderDiferido(false);
+        }).observe($('previews-arb'));
+    }
+}
+
 async function iniciar() {
     construirFormatos();
     construirDisenos();
@@ -893,6 +1327,8 @@ async function iniciar() {
         descargar(flyersActuales.map((_, i) => i), e.currentTarget);
     });
 
+    iniciarArbitros();
+
     $('visor-cerrar').addEventListener('click', cerrarVisor);
     $('visor').addEventListener('click', (e) => { if (e.target === $('visor')) cerrarVisor(); });
     $('visor-prev').addEventListener('click', () => { visorIdx--; pintarVisor(); });
@@ -906,10 +1342,11 @@ async function iniciar() {
     });
     window.addEventListener('resize', () => { if (visorIdx >= 0) pintarVisor(); });
 
-    await render();
+    aplicarPestana(estado.pestana);
+    await renderActivo(true);
     llenarInputs();
     // Cuando terminan de cargar las tipografías, se vuelve a dibujar con las definitivas
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => renderActivo(false));
 }
 
 iniciar();
