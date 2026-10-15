@@ -3,6 +3,9 @@
 // Pegás la programación (formato WhatsApp) y se reparte sola en varios
 // flyers en blanco y celeste, listos para descargar en PNG.
 //
+// Escudos: cargás la lista de equipos (con su imagen) y, al pegar la programación,
+// cada nombre se reconoce solo y se dibuja con su escudo (ver sección ESCUDOS).
+//
 // Pestaña "Árbitros": la misma programación se vuelve una planilla (hora, partido,
 // cancha, árbitro principal y asistentes) agrupada por día y categoría/zona.
 //
@@ -108,6 +111,8 @@ const FUENTES_GF = ['Bebas+Neue', 'Barlow+Condensed:wght@500;600;700;800'];
 const H = { cat: 40, zona: 26, fila: 28, sede: 15 };   // sede = renglón extra "CANCHA: X" bajo un partido
 // Alto de un partido: los que se juegan en otra cancha llevan un renglón extra
 const costoFila = (f) => H.fila + (f && f.nota && f.l ? H.sede : 0);
+// Con escudos las filas son más altas para que el escudo se vea bien (se decide en render())
+const H_FILA = { normal: 28, escudos: 36 };
 const CAB_H = 128;   // alto de la cabecera celeste
 const PIE_H = 38;    // alto de la barra inferior
 const PAD_SUP = 10;
@@ -332,6 +337,60 @@ function repartir(bloques, cap) {
 }
 
 // ------------------------------------------------------------
+// ESCUDOS: lista de equipos y detección por nombre
+//   Cada equipo tiene: nombre, otros nombres (alias) y escudo (imagen).
+//   El nombre que viene en la programación se compara con la lista ignorando
+//   mayúsculas, tildes, "FC"/"Club" y abreviaturas ("Dep." = Deportivo,
+//   "M. Ugarte" = Marcelino Ugarte). Si dos equipos empatan, no se elige ninguno.
+// ------------------------------------------------------------
+const PALABRAS_VACIAS = new Set(['fc', 'cf', 'ca', 'club', 'de', 'del', 'la', 'el', 'los', 'las', 'y']);
+function sinAcentos(s) {
+    return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+function tokensEquipo(nombre) {
+    const toks = sinAcentos(nombre).split(/[^a-z0-9]+/).filter(t => t && !PALABRAS_VACIAS.has(t));
+    return { fuertes: toks.filter(t => t.length > 1), iniciales: toks.filter(t => t.length === 1), norm: toks.join(' ') };
+}
+// Dos palabras coinciden si son iguales o una es el comienzo de la otra ("dep" / "deportivo")
+const tokIgual = (a, b) => a === b || (Math.min(a.length, b.length) >= 3 && (a.startsWith(b) || b.startsWith(a)));
+function puntajeEquipo(q, t) {
+    if (q.norm && q.norm === t.norm) return 2;
+    if (!q.fuertes.length || !t.fuertes.length) return 0;
+    const [chico, grande] = q.fuertes.length <= t.fuertes.length ? [q, t] : [t, q];
+    const usados = new Set();
+    for (const p of chico.fuertes) {   // todas las palabras del nombre más corto tienen que estar en el más largo
+        const k = grande.fuertes.findIndex((g, n) => !usados.has(n) && tokIgual(p, g));
+        if (k < 0) return 0;
+        usados.add(k);
+    }
+    const bono = (ini, fuertes) => ini.filter(x => fuertes.some(w => w[0] === x)).length * 0.05;
+    return chico.fuertes.length / grande.fuertes.length + bono(q.iniciales, t.fuertes) + bono(t.iniciales, q.fuertes);
+}
+// Devuelve una función nombre -> equipo (o null si no hay uno claro)
+function crearBuscador(equipos) {
+    const prep = (equipos || []).map(eq => {
+        const nombres = [eq.nombre, ...String(eq.alias || '').split(/[,;|]/)].map(tokensEquipo).filter(t => t.norm);
+        return { eq, nombres };
+    }).filter(p => p.nombres.length);
+    const memo = new Map();
+    return (nombre) => {
+        const clave = sinAcentos(nombre).replace(/\s+/g, ' ').trim();
+        if (memo.has(clave)) return memo.get(clave);
+        const q = tokensEquipo(nombre);
+        let mejor = null, pm = 0, empate = false;
+        prep.forEach(p => {
+            const pt = Math.max(...p.nombres.map(n => puntajeEquipo(q, n)));
+            if (pt <= 0) return;
+            if (pt > pm + 1e-9) { mejor = p.eq; pm = pt; empate = false; }
+            else if (Math.abs(pt - pm) < 1e-9) empate = true;
+        });
+        const r = (mejor && !empate && pm >= 0.5) ? mejor : null;
+        memo.set(clave, r);
+        return r;
+    };
+}
+
+// ------------------------------------------------------------
 // 3) DISEÑO DE CADA FLYER (HTML con estilos en línea, tamaño de diseño)
 // ------------------------------------------------------------
 const px = (n) => `${Math.round(n * 10) / 10}px`;
@@ -400,10 +459,18 @@ function itemHtml(it, sc, ctx) {
     }
     const columnas = 3 + (ctx.hayDia ? 1 : 0) + (ctx.hayHora ? 1 : 0);
     const reservado = (ctx.hayDia ? wDia : 0) + (ctx.hayHora ? wHora : 0);
-    const anchoNombre = (ctx.anchoUtil - 12 - 38 - reservado - (columnas - 1) * 6) / 2 - 2;
+    // Escudo: cuadrado fijo junto al "VS" (se reserva el lugar aunque falte, para que los nombres queden alineados)
+    const escT = ctx.hayEscudos ? Math.round(H.fila * sc - 6) : 0;
+    const escGap = 6;
+    const anchoNombre = (ctx.anchoUtil - 12 - 38 - reservado - (columnas - 1) * 6) / 2 - 2 - (escT ? escT + escGap : 0);
     const nombre = (txt, align) => {
         const tam = ajustar(txt, 18 * sc, anchoNombre, 0.45);
-        return `<div style="text-align:${align}; font-family:${TEXTO}; font-weight:800; font-size:${px(tam)}; line-height:1; color:${COLOR.tinta}; text-transform:uppercase; letter-spacing:0.02em; white-space:nowrap; overflow:hidden;">${esc(txt)}</div>`;
+        const estiloTxt = `font-family:${TEXTO}; font-weight:800; font-size:${px(tam)}; line-height:1; color:${COLOR.tinta}; text-transform:uppercase; letter-spacing:0.02em; white-space:nowrap; overflow:hidden;`;
+        if (!escT) return `<div style="text-align:${align}; ${estiloTxt}">${esc(txt)}</div>`;
+        const url = ctx.escudoDe ? ctx.escudoDe(txt) : '';
+        const caja = `<div style="width:${escT}px; height:${escT}px; flex-shrink:0; display:flex; align-items:center; justify-content:center;">${url ? `<img src="${url}" alt="" draggable="false" style="max-width:100%; max-height:100%; object-fit:contain; display:block;" />` : ''}</div>`;
+        const t = `<span style="display:block; min-width:0; ${estiloTxt}">${esc(txt)}</span>`;
+        return `<div style="display:flex; align-items:center; gap:${escGap}px; min-width:0; justify-content:${align === 'right' ? 'flex-end' : 'flex-start'};">${align === 'right' ? t + caja : caja + t}</div>`;
     };
     const cols = `${ctx.hayDia ? `${wDia}px ` : ''}${ctx.hayHora ? `${wHora}px ` : ''}minmax(0,1fr) 38px minmax(0,1fr)`;
     const sede = conSede
@@ -439,6 +506,8 @@ function htmlFlyer(pag, i, total, c) {
         hayHora: pag.items.some(it => it.t === 'fila' && it.hora),
         hayDia: pag.items.some(it => it.t === 'fila' && it.dia),
         anchoUtil: f.ancho - MARGEN * 2,
+        escudoDe: c.escudoDe || null,
+        hayEscudos: !!c.hayEscudos,
     };
     const cuerpoTop = CAB_H + f.seguroSup + PAD_SUP;
     const cuerpoAlto = f.alto - cuerpoTop - PIE_H - f.seguroInf - PAD_INF;
@@ -690,7 +759,7 @@ function htmlPlanilla(pag, i, total, c) {
 // Fuera del navegador (tests en Node) exportamos solo la lógica pura
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { parsearProgramacion, parsearFila, paginarCon, repartir, alturaUtil, FORMATOS, H, htmlFlyer, DISENOS, aplicarDiseno,
-        armarPartidos, agruparDias, paginarPlanilla, repartirPlanilla, htmlPlanilla, paletaPlanilla, fechaDe, sedeDeTitulo, A };
+        armarPartidos, agruparDias, paginarPlanilla, repartirPlanilla, htmlPlanilla, paletaPlanilla, fechaDe, sedeDeTitulo, A, crearBuscador, tokensEquipo };
 }
 
 // ============================================================
@@ -699,6 +768,8 @@ if (typeof module !== 'undefined' && module.exports) {
 if (typeof document !== 'undefined') {
 
 const CLAVE_LS = 'afoch_flyers_estado_v1';
+const CLAVE_EQ = 'afoch_flyers_equipos_v1';   // equipos y escudos van aparte: pesan más que el resto del estado
+const RE_IMG_DATA = /^data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/i;
 const TEXTO_EJEMPLO = `1ra y Sub-20
 Zona Sur - Fecha 6
 •  Marcelino Ugarte Vs. Deportivo Comercio – Miércoles 23/09 – 20:00 Hs
@@ -746,6 +817,8 @@ const ESTADO_INICIAL = {
     fecha: '',
     pie: 'A.F.O.CH',
     logoSubido: '',
+    usarEscudos: true,
+    equipos: [],    // [{ id, nombre, alias, escudo }]  (se guarda aparte, ver CLAVE_EQ)
     // Pestaña de árbitros
     pestana: 'flyers',
     disenoArb: 'excel',
@@ -776,15 +849,41 @@ function cargarEstado() {
             if (e.disenoArb !== 'excel' && !DISENOS[e.disenoArb]) e.disenoArb = 'excel';
             if (!e.arbitros || typeof e.arbitros !== 'object' || Array.isArray(e.arbitros)) e.arbitros = {};
             e.anio = Number(e.anio) || new Date().getFullYear();
+            e.usarEscudos = e.usarEscudos !== false;
+            e.equipos = leerEquipos();
             return e;
         }
     } catch (err) { /* storage bloqueado o JSON roto */ }
-    return { ...ESTADO_INICIAL };
+    return { ...ESTADO_INICIAL, equipos: leerEquipos() };
+}
+function leerEquipos() {
+    try {
+        const g = JSON.parse(localStorage.getItem(CLAVE_EQ) || '[]');
+        if (Array.isArray(g)) return g.filter(x => x && typeof x === 'object').map(normalizarEquipo);
+    } catch (err) { /* storage bloqueado o JSON roto */ }
+    return [];
+}
+function idEquipo() { return 'eq' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function normalizarEquipo(x) {
+    return {
+        id: String(x.id || idEquipo()).replace(/[^\w-]/g, ''),
+        nombre: String(x.nombre || '').trim(),
+        alias: String(x.alias || ''),
+        escudo: RE_IMG_DATA.test(String(x.escudo || '')) ? String(x.escudo) : '',   // solo imágenes en base64
+    };
 }
 function guardarEstado() {
-    try { localStorage.setItem(CLAVE_LS, JSON.stringify(estado)); }
+    const { equipos, ...resto } = estado;
+    try { localStorage.setItem(CLAVE_LS, JSON.stringify(resto)); }
     catch (err) {
-        try { localStorage.setItem(CLAVE_LS, JSON.stringify({ ...estado, logoSubido: '' })); } catch (e2) { /* sin storage */ }
+        try { localStorage.setItem(CLAVE_LS, JSON.stringify({ ...resto, logoSubido: '' })); } catch (e2) { /* sin storage */ }
+    }
+}
+function guardarEquipos() {
+    try { localStorage.setItem(CLAVE_EQ, JSON.stringify(estado.equipos)); return true; }
+    catch (err) {
+        mostrarToast('No hay lugar para guardar tantos escudos en este navegador. Usá "Guardar copia".', 'error');
+        return false;
     }
 }
 
@@ -822,15 +921,21 @@ async function render() {
     await cargarLogoArchivo();
     const f = FORMATOS[estado.formato];
     const bloques = parsearProgramacion(estado.texto);
+    // Escudos: si hay al menos uno cargado, las filas se hacen más altas (antes de repartir los partidos)
+    const hayEscudos = !!estado.usarEscudos && estado.equipos.some(e => e.escudo);
+    H.fila = hayEscudos ? H_FILA.escudos : H_FILA.normal;
+    const buscarEq = hayEscudos ? crearBuscador(estado.equipos) : null;
+    const escudoDe = buscarEq ? (n) => { const e = buscarEq(n); return (e && e.escudo) || ''; } : null;
     const paginas = repartir(bloques, alturaUtil(f));
     const total = paginas.length;
     const nPartidos = bloques.reduce((a, b) => a + b.filas.length, 0);
-    const contexto = { f, diseno: estado.diseno, logoTam: estado.logoTam, titulo: estado.titulo, fecha: estado.fecha, pie: estado.pie, logo: logoActual() };
+    const contexto = { f, diseno: estado.diseno, logoTam: estado.logoTam, titulo: estado.titulo, fecha: estado.fecha, pie: estado.pie, logo: logoActual(), escudoDe, hayEscudos };
 
     $('resumen').textContent = total
         ? `${nPartidos} ${nPartidos === 1 ? 'partido' : 'partidos'} → ${total} ${total === 1 ? 'flyer' : 'flyers'}`
         : 'Pegá la programación para ver los flyers.';
     $('btn-todos').disabled = !total;
+    actualizarPanelEscudos();
 
     const ESC_PREV = 270 / f.ancho;
     const htmls = paginas.map((p, i) => htmlFlyer(p, i, total, contexto));
@@ -1053,6 +1158,7 @@ function llenarInputs() {
     $('logo-estado').textContent = estado.logoSubido ? 'Logo subido desde tu equipo' : (logoArchivo ? 'Usando afoch-logo.png' : 'Sin logo (se muestra el texto A.F.O.CH)');
     $('btn-logo-quitar').classList.toggle('hidden', !estado.logoSubido);
     $('in-logo-tam').value = estado.logoTam;
+    $('chk-escudos').checked = !!estado.usarEscudos;
     $('logo-tam-valor').textContent = `${Math.round(estado.logoTam / 84 * 100)}%`;
 }
 
@@ -1074,6 +1180,189 @@ function leerLogo(archivo) {
         img.src = lector.result;
     };
     lector.readAsDataURL(archivo);
+}
+
+// ---------- Escudos de los equipos ----------
+// Reduce la imagen (máx. 200 px) y la devuelve como data URL PNG, para que entre en el almacenamiento y salga en el PNG final
+function imagenADataURL(archivo, max = 200) {
+    return new Promise((resolve, reject) => {
+        if (!archivo || !/^image\//.test(archivo.type)) { reject(new Error('no es una imagen')); return; }
+        const lector = new FileReader();
+        lector.onerror = reject;
+        lector.onload = () => {
+            const img = new Image();
+            img.onerror = reject;
+            img.onload = () => {
+                const w = img.naturalWidth || max, h = img.naturalHeight || max;
+                const esc2 = Math.min(1, max / Math.max(w, h));
+                const c = document.createElement('canvas');
+                c.width = Math.max(1, Math.round(w * esc2));
+                c.height = Math.max(1, Math.round(h * esc2));
+                c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                resolve(c.toDataURL('image/png'));
+            };
+            img.src = lector.result;
+        };
+        lector.readAsDataURL(archivo);
+    });
+}
+
+// Nombres de equipos que aparecen en la programación (sin repetir)
+function equiposDeProgramacion() {
+    const vistos = new Map();
+    parsearProgramacion(estado.texto).forEach(b => b.filas.forEach(f => {
+        if (!f.l) return;
+        [f.l, f.v].forEach(n => { const k = sinAcentos(n).replace(/\s+/g, ' ').trim(); if (!vistos.has(k)) vistos.set(k, n); });
+    }));
+    return [...vistos.values()];
+}
+
+// Agrega a la lista los nombres que todavía no tienen equipo. Acepta "Nombre | otro nombre, otro más". Devuelve cuántos agregó.
+function agregarEquipos(lineas) {
+    const nuevos = [];
+    // primero los nombres largos: "Marcelino Ugarte" queda como nombre y "M. Ugarte" se reconoce como el mismo
+    String(lineas.join('\n')).split(/\r?\n/).map(s => s.trim()).filter(Boolean).sort((a, b) => b.length - a.length).forEach(linea => {
+        const [nombre, ...resto] = linea.split('|').map(s => s.trim());
+        if (!nombre || crearBuscador([...estado.equipos, ...nuevos])(nombre)) return;
+        nuevos.push({ id: idEquipo(), nombre, alias: resto.filter(Boolean).join(', '), escudo: '' });
+    });
+    nuevos.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    estado.equipos.push(...nuevos);
+    return nuevos.length;
+}
+
+function construirEquipos() {
+    const cont = $('lista-equipos');
+    if (!estado.equipos.length) {
+        cont.innerHTML = '<p class="campo-ayuda">Todavía no hay equipos. Tocá "Traer equipos de la programación" o pegá una lista.</p>';
+        return;
+    }
+    cont.innerHTML = estado.equipos.map(e => `
+        <div class="eq-card ${e.escudo ? '' : 'eq-sin'}" data-eq="${esc(e.id)}">
+            <label class="eq-escudo" title="${e.escudo ? 'Cambiar escudo' : 'Subir escudo'}">
+                ${e.escudo ? `<img src="${e.escudo}" alt="" draggable="false">` : '<span>+</span>'}
+                <input type="file" accept="image/*" class="hidden" data-eq-file>
+            </label>
+            <div class="min-w-0 flex-1 flex flex-col gap-1">
+                <input type="text" class="campo campo-sm" data-eq-nombre value="${esc(e.nombre)}" placeholder="Nombre del equipo" autocomplete="off">
+                <input type="text" class="campo campo-sm" data-eq-alias value="${esc(e.alias)}" placeholder="Otros nombres (separados por coma)" autocomplete="off">
+            </div>
+            <button type="button" class="btn-sec !px-2.5" data-eq-borrar aria-label="Quitar equipo">✕</button>
+        </div>`).join('');
+}
+
+// Resumen y avisos: qué equipos de la programación no están en la lista o no tienen escudo
+function actualizarPanelEscudos() {
+    const buscar = crearBuscador(estado.equipos);
+    const nombres = equiposDeProgramacion();
+    const sinEquipo = nombres.filter(n => !buscar(n));
+    const sinImagen = [...new Set(nombres.map(n => buscar(n)).filter(e => e && !e.escudo).map(e => e.nombre))];
+    const con = estado.equipos.filter(e => e.escudo).length;
+    $('escudos-resumen').textContent = estado.equipos.length
+        ? `${estado.equipos.length} ${estado.equipos.length === 1 ? 'equipo' : 'equipos'} · ${con} con escudo`
+        : 'Todavía no cargaste equipos.';
+    const avisos = [];
+    if (sinEquipo.length) avisos.push(`Sin equipo en la lista (${sinEquipo.length}): ${sinEquipo.join(', ')}.`);
+    if (sinImagen.length) avisos.push(`Sin escudo (${sinImagen.length}): ${sinImagen.join(', ')}.`);
+    $('escudos-avisos').textContent = avisos.join(' ');
+    $('escudos-avisos').classList.toggle('hidden', !avisos.length);
+}
+
+function guardarCopiaEquipos() {
+    const url = URL.createObjectURL(new Blob([JSON.stringify({ version: 1, equipos: estado.equipos })], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = 'afoch-escudos.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+function cargarCopiaEquipos(archivo) {
+    if (!archivo) return;
+    const lector = new FileReader();
+    lector.onload = () => {
+        try {
+            const d = JSON.parse(lector.result);
+            const lista = Array.isArray(d) ? d : d.equipos;
+            if (!Array.isArray(lista)) throw new Error('formato');
+            let nuevos = 0, actualizados = 0;
+            lista.filter(x => x && typeof x === 'object').map(normalizarEquipo).filter(x => x.nombre).forEach(x => {
+                const ex = crearBuscador(estado.equipos)(x.nombre);
+                if (!ex) { estado.equipos.push(x); nuevos++; }
+                else if (x.escudo && !ex.escudo) { ex.escudo = x.escudo; actualizados++; }
+            });
+            guardarEquipos(); construirEquipos(); render();
+            mostrarToast(`Copia cargada: ${nuevos} equipos nuevos, ${actualizados} escudos completados.`);
+        } catch (err) { mostrarToast('Ese archivo no es una copia de escudos válida.', 'error'); }
+    };
+    lector.readAsText(archivo);
+}
+
+function iniciarEscudos() {
+    $('chk-escudos').addEventListener('change', (e) => { estado.usarEscudos = e.target.checked; guardarEstado(); render(); });
+
+    const tras = (n, texto) => {
+        if (n) { guardarEquipos(); construirEquipos(); render(); }
+        mostrarToast(n ? texto : 'No hay equipos nuevos para agregar.');
+    };
+    $('btn-eq-prog').addEventListener('click', () => {
+        const n = agregarEquipos(equiposDeProgramacion());
+        tras(n, `Se agregaron ${n} ${n === 1 ? 'equipo' : 'equipos'}. Ahora subí los escudos.`);
+    });
+    $('btn-eq-agregar').addEventListener('click', () => {
+        const n = agregarEquipos([$('in-eq-texto').value]);
+        $('in-eq-texto').value = '';
+        tras(n, `Se agregaron ${n} ${n === 1 ? 'equipo' : 'equipos'}.`);
+    });
+
+    // Varios escudos de una vez: el nombre del archivo es el del equipo (si no existe en la lista, lo crea)
+    $('in-escudos-multi').addEventListener('change', async (e) => {
+        const archivos = [...e.target.files];
+        e.target.value = '';
+        let nuevos = 0, puestos = 0;
+        for (const a of archivos) {
+            try {
+                const url = await imagenADataURL(a);
+                const nombre = a.name.replace(/\.[^.]+$/, '').replace(/[_\-]+/g, ' ').replace(/\s+/g, ' ').trim();
+                let eq = crearBuscador(estado.equipos)(nombre);
+                if (!eq) { eq = { id: idEquipo(), nombre, alias: '', escudo: '' }; estado.equipos.push(eq); nuevos++; }
+                eq.escudo = url; puestos++;
+            } catch (err) { /* archivo que no es imagen: se ignora */ }
+        }
+        if (!puestos) { mostrarToast('No se pudo leer ninguna imagen.', 'error'); return; }
+        guardarEquipos(); construirEquipos(); render();
+        mostrarToast(`${puestos} ${puestos === 1 ? 'escudo cargado' : 'escudos cargados'}${nuevos ? ` (${nuevos} equipos nuevos)` : ''}.`);
+    });
+
+    $('btn-eq-copia').addEventListener('click', guardarCopiaEquipos);
+    $('in-eq-copia').addEventListener('change', (e) => { cargarCopiaEquipos(e.target.files[0]); e.target.value = ''; });
+
+    const lista = $('lista-equipos');
+    const equipoDe = (el) => { const c = el.closest('[data-eq]'); return c && estado.equipos.find(x => x.id === c.dataset.eq); };
+    lista.addEventListener('input', (e) => {
+        const eq = equipoDe(e.target);
+        if (!eq) return;
+        if (e.target.matches('[data-eq-nombre]')) eq.nombre = e.target.value;
+        else if (e.target.matches('[data-eq-alias]')) eq.alias = e.target.value;
+        else return;
+        guardarEquipos(); renderDiferido(false);
+    });
+    lista.addEventListener('change', async (e) => {
+        if (!e.target.matches('[data-eq-file]')) return;
+        const eq = equipoDe(e.target), archivo = e.target.files[0];
+        e.target.value = '';
+        if (!eq || !archivo) return;
+        try {
+            eq.escudo = await imagenADataURL(archivo);
+            guardarEquipos(); construirEquipos(); render();
+        } catch (err) { mostrarToast('No se pudo leer esa imagen.', 'error'); }
+    });
+    lista.addEventListener('click', (e) => {
+        if (!e.target.closest('[data-eq-borrar]')) return;
+        const eq = equipoDe(e.target);
+        if (!eq) return;
+        if (!confirm(`¿Quitar a ${eq.nombre || 'este equipo'} de la lista?`)) return;
+        estado.equipos = estado.equipos.filter(x => x !== eq);
+        guardarEquipos(); construirEquipos(); render();
+    });
 }
 
 // ---------- Pestaña ÁRBITROS ----------
@@ -1328,6 +1617,8 @@ async function iniciar() {
     });
 
     iniciarArbitros();
+    construirEquipos();
+    iniciarEscudos();
 
     $('visor-cerrar').addEventListener('click', cerrarVisor);
     $('visor').addEventListener('click', (e) => { if (e.target === $('visor')) cerrarVisor(); });
