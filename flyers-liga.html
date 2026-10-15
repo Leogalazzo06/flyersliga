@@ -74,6 +74,12 @@
         .arb-rot { display: block; font-size: 0.6rem; font-weight: 800; color: #64748b; margin-bottom: 0.15rem; }
         .arb-aviso { font-size: 0.64rem; font-weight: 700; color: #b45309; margin-top: 0.4rem; }
 
+        .eq-card { display: flex; align-items: center; gap: 0.6rem; border: 1px solid #e2e8f0; border-radius: 0.9rem; padding: 0.5rem; background: #fff; }
+        .eq-sin { border-color: #f59e0b; background: #fffbeb; }
+        .eq-escudo { width: 3.2rem; height: 3.2rem; flex-shrink: 0; border: 2px dashed #cbd5e1; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #94a3b8; font-size: 1.3rem; font-weight: 800; background: #f8fafc; overflow: hidden; }
+        .eq-escudo:hover { border-color: #0673C8; color: #0673C8; }
+        .eq-escudo img { max-width: 90%; max-height: 90%; object-fit: contain; display: block; }
+
         :focus-visible { outline: 2px solid #0673C8; outline-offset: 2px; }
         @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
     </style>
@@ -167,6 +173,38 @@
                     <input id="in-logo-tam" type="range" min="50" max="124" step="2" value="84" class="w-full accent-liga">
                 </div>
                 <p class="campo-ayuda">También podés dejar <code class="font-bold">afoch-logo.png</code> en la misma carpeta que este archivo (abrilo desde tu sitio, no con doble clic desde el disco). Lo que subís acá se guarda en este navegador.</p>
+            </section>
+            <section class="seccion" id="sec-escudos">
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <h2 class="seccion-titulo !mb-0">Escudos de los equipos</h2>
+                    <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
+                        <input id="chk-escudos" type="checkbox" class="accent-liga"> Mostrar
+                    </label>
+                </div>
+                <p id="escudos-resumen" class="text-[0.72rem] font-semibold text-slate-500"></p>
+                <p id="escudos-avisos" class="arb-aviso hidden"></p>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <button type="button" id="btn-eq-prog" class="btn-sec">Traer equipos de la programación</button>
+                    <label class="btn-sec cursor-pointer">
+                        Subir varios escudos
+                        <input id="in-escudos-multi" type="file" accept="image/*" multiple class="hidden">
+                    </label>
+                </div>
+                <details class="mt-3">
+                    <summary class="text-[0.72rem] font-extrabold text-slate-600 cursor-pointer">Pegar una lista de equipos</summary>
+                    <textarea id="in-eq-texto" class="campo mt-2" rows="5" spellcheck="false" placeholder="Marcelino Ugarte | M. Ugarte&#10;Deportivo Comercio | Dep. Comercio&#10;Avenida FC"></textarea>
+                    <button type="button" id="btn-eq-agregar" class="btn-sec mt-2">Agregar a la lista</button>
+                    <p class="campo-ayuda">Un equipo por renglón. Si se escribe distinto en la programación, ponelo después de una barra <b>|</b> (podés poner varios separados por coma).</p>
+                </details>
+                <div id="lista-equipos" class="flex flex-col gap-2 mt-3 max-h-[50vh] overflow-y-auto pr-1"></div>
+                <div class="flex flex-wrap items-center gap-2 mt-3">
+                    <button type="button" id="btn-eq-copia" class="btn-sec">Guardar copia</button>
+                    <label class="btn-sec cursor-pointer">
+                        Cargar copia
+                        <input id="in-eq-copia" type="file" accept="application/json,.json" class="hidden">
+                    </label>
+                </div>
+                <p class="campo-ayuda">El nombre se reconoce aunque cambie la mayúscula, la tilde, el "FC" o venga abreviado ("Dep." / "M. Ugarte"). Los escudos se guardan en este navegador: hacé una copia para tenerlos en otra compu o por si se borran los datos. Con escudos, los flyers usan renglones más altos (entran menos partidos por flyer).</p>
             </section>
         </div>
 
