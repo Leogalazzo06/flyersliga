@@ -770,6 +770,7 @@ if (typeof document !== 'undefined') {
 const CLAVE_LS = 'afoch_flyers_estado_v1';
 const CLAVE_EQ = 'afoch_flyers_equipos_v1';   // equipos y escudos van aparte: pesan más que el resto del estado
 const RE_IMG_DATA = /^data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/i;
+const RE_IMG_URL = /^https:\/\/[^\s"'<>]+$/i;   // enlace a una imagen (Cloudinary)
 const TEXTO_EJEMPLO = `1ra y Sub-20
 Zona Sur - Fecha 6
 •  Marcelino Ugarte Vs. Deportivo Comercio – Miércoles 23/09 – 20:00 Hs
@@ -827,6 +828,10 @@ const ESTADO_INICIAL = {
     ordenar: true,
     nomina: '',
     arbitros: {},   // { clave del partido: { cancha, ap, a1, a2 } }
+    // Programación guardada en la nube que se está editando (vacío = todavía no se guardó)
+    progId: '',
+    progNombre: '',
+    subirFlyers: true,   // al guardar una programación, subir también los PNG a ImageKit
 };
 let estado = cargarEstado();
 let logoArchivo = null;   // logo leído de afoch-logo.png (data URL), o false si no está
@@ -850,6 +855,7 @@ function cargarEstado() {
             if (!e.arbitros || typeof e.arbitros !== 'object' || Array.isArray(e.arbitros)) e.arbitros = {};
             e.anio = Number(e.anio) || new Date().getFullYear();
             e.usarEscudos = e.usarEscudos !== false;
+            e.subirFlyers = e.subirFlyers !== false;
             e.equipos = leerEquipos();
             return e;
         }
@@ -869,7 +875,7 @@ function normalizarEquipo(x) {
         id: String(x.id || idEquipo()).replace(/[^\w-]/g, ''),
         nombre: String(x.nombre || '').trim(),
         alias: String(x.alias || ''),
-        escudo: RE_IMG_DATA.test(String(x.escudo || '')) ? String(x.escudo) : '',   // solo imágenes en base64
+        escudo: (RE_IMG_DATA.test(String(x.escudo || '')) || RE_IMG_URL.test(String(x.escudo || ''))) ? String(x.escudo) : '',   // solo imágenes en base64 o enlaces https
     };
 }
 function guardarEstado() {
@@ -879,12 +885,17 @@ function guardarEstado() {
         try { localStorage.setItem(CLAVE_LS, JSON.stringify({ ...resto, logoSubido: '' })); } catch (e2) { /* sin storage */ }
     }
 }
-function guardarEquipos() {
+// Copia en este navegador (localStorage)
+function guardarEquiposLocal() {
     try { localStorage.setItem(CLAVE_EQ, JSON.stringify(estado.equipos)); return true; }
-    catch (err) {
-        mostrarToast('No hay lugar para guardar tantos escudos en este navegador. Usá "Guardar copia".', 'error');
-        return false;
-    }
+    catch (err) { return false; }
+}
+// Copia en este navegador + subida a la nube (con una pequeña espera para no escribir en cada tecla)
+function guardarEquipos() {
+    const ok = guardarEquiposLocal();
+    if (!ok && !nubeListo) mostrarToast('No hay lugar para guardar tantos escudos en este navegador. Usá "Guardar copia".', 'error');
+    programarSyncEquipos();
+    return ok;
 }
 
 const $ = (id) => document.getElementById(id);
@@ -925,7 +936,8 @@ async function render() {
     const hayEscudos = !!estado.usarEscudos && estado.equipos.some(e => e.escudo);
     H.fila = hayEscudos ? H_FILA.escudos : H_FILA.normal;
     const buscarEq = hayEscudos ? crearBuscador(estado.equipos) : null;
-    const escudoDe = buscarEq ? (n) => { const e = buscarEq(n); return (e && e.escudo) || ''; } : null;
+    const escudoDe = buscarEq ? (n) => { const e = buscarEq(n); const u = (e && e.escudo) || ''; return cacheEscudos.get(u) || u; } : null;
+    if (hayEscudos) precargarEscudos().then(cambio => { if (cambio) renderDiferido(false); });
     const paginas = repartir(bloques, alturaUtil(f));
     const total = paginas.length;
     const nPartidos = bloques.reduce((a, b) => a + b.filas.length, 0);
@@ -1063,6 +1075,7 @@ const pausa = (ms) => new Promise(r => setTimeout(r, ms));
 async function generarArchivos(indices) {
     clearTimeout(temporizador);
     pendLista = false;
+    await precargarEscudos();   // los escudos de ImageKit tienen que estar como imagen en memoria para salir en el PNG
     await renderActivo(false);
     const cssFuente = await prepararFuentes();
     const archivos = [];
@@ -1237,7 +1250,16 @@ function construirEquipos() {
         cont.innerHTML = '<p class="campo-ayuda">Todavía no hay equipos. Tocá "Traer equipos de la programación" o pegá una lista.</p>';
         return;
     }
-    cont.innerHTML = estado.equipos.map(e => `
+    // Buscador: por nombre u otros nombres, sin importar mayúsculas ni tildes
+    const q = sinAcentos(filtroEq.q).replace(/\s+/g, ' ').trim();
+    const lista = estado.equipos.filter(e =>
+        (!q || sinAcentos(`${e.nombre} ${e.alias}`).includes(q)) && (!filtroEq.sinEscudo || !e.escudo));
+    $('eq-contador').textContent = (q || filtroEq.sinEscudo) ? `${lista.length} de ${estado.equipos.length}` : `${estado.equipos.length}`;
+    if (!lista.length) {
+        cont.innerHTML = '<p class="campo-ayuda">Ningún equipo coincide con la búsqueda.</p>';
+        return;
+    }
+    cont.innerHTML = lista.map(e => `
         <div class="eq-card ${e.escudo ? '' : 'eq-sin'}" data-eq="${esc(e.id)}">
             <label class="eq-escudo" title="${e.escudo ? 'Cambiar escudo' : 'Subir escudo'}">
                 ${e.escudo ? `<img src="${e.escudo}" alt="" draggable="false">` : '<span>+</span>'}
@@ -1264,6 +1286,7 @@ function actualizarPanelEscudos() {
     const avisos = [];
     if (sinEquipo.length) avisos.push(`Sin equipo en la lista (${sinEquipo.length}): ${sinEquipo.join(', ')}.`);
     if (sinImagen.length) avisos.push(`Sin escudo (${sinImagen.length}): ${sinImagen.join(', ')}.`);
+    if (!ikListo()) avisos.push('ImageKit sin claves (más abajo): los escudos nuevos se guardan como imagen dentro de Firestore.');
     $('escudos-avisos').textContent = avisos.join(' ');
     $('escudos-avisos').classList.toggle('hidden', !avisos.length);
 }
@@ -1296,6 +1319,61 @@ function cargarCopiaEquipos(archivo) {
     lector.readAsText(archivo);
 }
 
+// ---------- Buscador y alta de equipos con escudo ----------
+const filtroEq = { q: '', sinEscudo: false };
+let nuevoEscudo = '';   // escudo elegido en el formulario "Agregar un equipo" (data URL)
+
+function pintarNuevoEscudo() {
+    $('eq-nuevo-preview').innerHTML = nuevoEscudo ? `<img src="${nuevoEscudo}" alt="" draggable="false">` : '+';
+}
+
+async function agregarEquipoNuevo() {
+    const nombre = $('in-eq-nuevo-nombre').value.replace(/\s+/g, ' ').trim();
+    if (!nombre) { mostrarToast('Escribí el nombre del equipo.', 'error'); return; }
+    const boton = $('btn-eq-nuevo');
+    boton.disabled = true;
+    try {
+        let eq = crearBuscador(estado.equipos)(nombre);
+        if (eq) {
+            if (!nuevoEscudo) { mostrarToast(`Ya existe "${eq.nombre}" en la lista.`, 'error'); return; }
+            if (!confirm(`Ya existe "${eq.nombre}". ¿Reemplazar su escudo?`)) return;
+        } else {
+            eq = { id: idEquipo(), nombre, alias: '', escudo: '' };
+            estado.equipos.push(eq);
+        }
+        if (nuevoEscudo) eq.escudo = await escudoParaGuardar(eq, nuevoEscudo);
+        estado.equipos.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+        guardarEquipos();
+        nuevoEscudo = ''; pintarNuevoEscudo();
+        $('in-eq-nuevo-nombre').value = '';
+        // se deja la búsqueda en el equipo agregado para que se vea enseguida
+        filtroEq.q = eq.nombre; filtroEq.sinEscudo = false;
+        $('in-eq-buscar').value = eq.nombre; $('chk-eq-sin').checked = false;
+        construirEquipos(); renderActivo(false);
+        mostrarToast(`Listo: ${eq.nombre}${eq.escudo ? ' con su escudo' : ' (todavía sin escudo)'}.`);
+    } finally {
+        boton.disabled = false;
+    }
+}
+
+function iniciarBuscadorEscudos() {
+    $('in-eq-buscar').addEventListener('input', (e) => { filtroEq.q = e.target.value; construirEquipos(); });
+    $('chk-eq-sin').addEventListener('change', (e) => { filtroEq.sinEscudo = e.target.checked; construirEquipos(); });
+    $('in-eq-nuevo-file').addEventListener('change', async (e) => {
+        const archivo = e.target.files[0];
+        e.target.value = '';
+        if (!archivo) return;
+        try {
+            nuevoEscudo = await imagenADataURL(archivo);
+            pintarNuevoEscudo();
+            const campo = $('in-eq-nuevo-nombre');
+            if (!campo.value.trim()) campo.value = archivo.name.replace(/\.[^.]+$/, '').replace(/[_\-]+/g, ' ').replace(/\s+/g, ' ').trim();
+        } catch (err) { mostrarToast('No se pudo leer esa imagen.', 'error'); }
+    });
+    $('btn-eq-nuevo').addEventListener('click', agregarEquipoNuevo);
+    $('in-eq-nuevo-nombre').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); agregarEquipoNuevo(); } });
+}
+
 function iniciarEscudos() {
     $('chk-escudos').addEventListener('change', (e) => { estado.usarEscudos = e.target.checked; guardarEstado(); render(); });
 
@@ -1324,7 +1402,7 @@ function iniciarEscudos() {
                 const nombre = a.name.replace(/\.[^.]+$/, '').replace(/[_\-]+/g, ' ').replace(/\s+/g, ' ').trim();
                 let eq = crearBuscador(estado.equipos)(nombre);
                 if (!eq) { eq = { id: idEquipo(), nombre, alias: '', escudo: '' }; estado.equipos.push(eq); nuevos++; }
-                eq.escudo = url; puestos++;
+                eq.escudo = await escudoParaGuardar(eq, url); puestos++;
             } catch (err) { /* archivo que no es imagen: se ignora */ }
         }
         if (!puestos) { mostrarToast('No se pudo leer ninguna imagen.', 'error'); return; }
@@ -1351,7 +1429,7 @@ function iniciarEscudos() {
         e.target.value = '';
         if (!eq || !archivo) return;
         try {
-            eq.escudo = await imagenADataURL(archivo);
+            eq.escudo = await escudoParaGuardar(eq, await imagenADataURL(archivo));
             guardarEquipos(); construirEquipos(); render();
         } catch (err) { mostrarToast('No se pudo leer esa imagen.', 'error'); }
     });
@@ -1371,7 +1449,10 @@ const normNombre = (s) => String(s || '').trim().toLowerCase().replace(/\s+/g, '
 let anchoPrevArb = 0;   // ancho con el que se dibujó la vista previa de la planilla
 const hayHora = (h) => /^\d{1,2}:\d{2}$/.test(h);
 
-function renderActivo(lista = true) { return estado.pestana === 'arbitros' ? renderArb(lista) : render(); }
+function renderActivo(lista = true) {
+    if (estado.pestana === 'historial') return Promise.resolve();   // el historial no dibuja flyers
+    return estado.pestana === 'arbitros' ? renderArb(lista) : render();
+}
 function renderDiferido(lista = true) {
     pendLista = pendLista || lista;
     clearTimeout(temporizador);
@@ -1379,12 +1460,13 @@ function renderDiferido(lista = true) {
 }
 
 function aplicarPestana(p) {
-    const arb = p === 'arbitros';
+    const arb = p === 'arbitros', hist = p === 'historial';
     if (visorIdx >= 0) cerrarVisor();
-    $('vista-flyers').classList.toggle('hidden', arb);
+    $('vista-flyers').classList.toggle('hidden', arb || hist);
     $('vista-arbitros').classList.toggle('hidden', !arb);
+    $('vista-historial').classList.toggle('hidden', !hist);
     // La programación es una sola: el mismo cuadro de texto se mueve de una pestaña a la otra
-    $(arb ? 'slot-prog-arb' : 'slot-prog-flyers').appendChild($('sec-programacion'));
+    if (!hist) $(arb ? 'slot-prog-arb' : 'slot-prog-flyers').appendChild($('sec-programacion'));
     document.querySelectorAll('[data-pestana]').forEach(b => {
         const on = b.dataset.pestana === p;
         b.classList.toggle('tab-activa', on);
@@ -1504,7 +1586,8 @@ function iniciarArbitros() {
         const b = e.target.closest('[data-pestana]');
         if (!b || b.dataset.pestana === estado.pestana) return;
         estado.pestana = b.dataset.pestana;
-        guardarEstado(); aplicarPestana(estado.pestana); renderActivo(true);
+        guardarEstado(); aplicarPestana(estado.pestana);
+        if (estado.pestana === 'historial') cargarHistorial(); else renderActivo(true);
     });
 
     // Estilos de la planilla
@@ -1575,6 +1658,428 @@ function iniciarArbitros() {
     }
 }
 
+// ---------- Nube (Firebase) ----------
+// firebase-liga.js deja listo window.fb (Firestore). Si no carga, el generador sigue andando igual en este navegador.
+const CLAVE_NUBE = 'afoch_flyers_nube_v1';   // marca: los equipos de este navegador ya se subieron a la nube una vez
+const nube = () => window.fb || null;
+let nubeIniciada = false, nubeListo = false, tempNube = null;
+let nubeEquipos = new Map();   // id -> JSON del equipo tal como está guardado en la nube
+let historial = [];            // programaciones guardadas (pestaña Historial)
+
+function estadoNube(texto, tipo) {
+    const el = $('nube-estado');
+    el.textContent = texto;
+    el.dataset.tipo = tipo;
+}
+function mensajeErrorNube(err) {
+    const c = String((err && err.code) || '');
+    if (c.includes('permission-denied')) return 'Firebase rechazó la operación: revisá las reglas de Firestore.';
+    if (c.includes('unavailable') || c.includes('network')) return 'No hay conexión con Firebase.';
+    return 'No se pudo completar la operación en Firebase.';
+}
+
+// Primera conexión: trae los equipos de la nube. La primera vez, los que solo estaban en este navegador se suben.
+async function iniciarNube() {
+    const fb = nube();
+    if (!fb || nubeIniciada) return;
+    nubeIniciada = true;
+    estadoNube('Nube: conectando…', 'espera');
+    try {
+        const remotos = (await fb.equipos.listar()).map(normalizarEquipo).filter(x => x.nombre);
+        nubeEquipos = new Map(remotos.map(x => [x.id, JSON.stringify(x)]));
+        let migrado = false;
+        try { migrado = !!localStorage.getItem(CLAVE_NUBE); } catch (err) { /* sin storage */ }
+        const lista = new Map(remotos.map(x => [x.id, x]));
+        if (!migrado) estado.equipos.forEach(x => { if (x.nombre && !lista.has(x.id)) lista.set(x.id, x); });
+        estado.equipos = [...lista.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+        nubeListo = true;
+        guardarEquiposLocal();
+        construirEquipos();
+        renderActivo(false);
+        // Sube lo que falte; solo si salió bien se marca la migración (si no, se reintenta la próxima vez)
+        if (await sincronizarEquiposNube()) {
+            try { localStorage.setItem(CLAVE_NUBE, '1'); } catch (err) { /* sin storage */ }
+        }
+        if (estado.pestana === 'historial') cargarHistorial();
+    } catch (err) {
+        nubeIniciada = false;
+        console.error('No se pudo conectar con Firebase:', err);
+        estadoNube('Nube: error de conexión', 'error');
+        mostrarToast(mensajeErrorNube(err), 'error');
+    }
+}
+
+function programarSyncEquipos() {
+    if (!nubeListo) return;
+    clearTimeout(tempNube);
+    tempNube = setTimeout(sincronizarEquiposNube, 900);
+}
+// Sube los equipos nuevos o cambiados y borra de la nube los que se quitaron. Devuelve true si quedó todo al día.
+async function sincronizarEquiposNube() {
+    const fb = nube();
+    if (!fb || !nubeListo) return false;
+    const guardar = estado.equipos.filter(x => x.nombre && nubeEquipos.get(x.id) !== JSON.stringify(x));
+    const ids = new Set(estado.equipos.map(x => x.id));
+    const borrar = [...nubeEquipos.keys()].filter(id => !ids.has(id));
+    if (!guardar.length && !borrar.length) return true;
+    estadoNube('Nube: guardando…', 'espera');
+    try {
+        await fb.equipos.sincronizar(guardar, borrar);
+        guardar.forEach(x => nubeEquipos.set(x.id, JSON.stringify(x)));
+        borrar.forEach(id => nubeEquipos.delete(id));
+        estadoNube('Nube: conectada', 'ok');
+        return true;
+    } catch (err) {
+        console.error('No se pudieron guardar los equipos en la nube:', err);
+        estadoNube('Nube: error al guardar', 'error');
+        mostrarToast(mensajeErrorNube(err), 'error');
+        return false;
+    }
+}
+
+// ---------- Programaciones guardadas ----------
+function sincronizarBotonesProg() {
+    const abierta = !!estado.progId;
+    $('btn-prog-guardar').textContent = abierta ? 'Actualizar' : 'Guardar';
+    $('btn-prog-nueva').classList.toggle('hidden', !abierta);
+    $('prog-estado').textContent = abierta ? `Guardada: ${estado.progNombre || 'sin nombre'}` : 'Todavía no está guardada en la nube';
+}
+
+function nombreSugerido() {
+    const f = String(estado.fecha || '').trim();
+    if (f) return f;
+    const b = parsearProgramacion(estado.texto)[0];
+    const base = b ? [b.cat, b.zona].filter(Boolean).join(' - ') : '';
+    return (base || 'Programación').slice(0, 60);
+}
+
+// Todo lo necesario para volver a armar los mismos flyers y la misma planilla de árbitros
+function datosProgramacion() {
+    return {
+        texto: String(estado.texto || ''),
+        titulo: String(estado.titulo || ''),
+        fecha: String(estado.fecha || ''),
+        pie: String(estado.pie || ''),
+        diseno: estado.diseno,
+        formato: estado.formato,
+        logoTam: estado.logoTam,
+        nPartidos: parsearProgramacion(estado.texto).reduce((a, b) => a + b.filas.length, 0),
+        anio: estado.anio,
+        diaDefault: String(estado.diaDefault || ''),
+        ordenar: !!estado.ordenar,
+        disenoArb: estado.disenoArb,
+        nomina: String(estado.nomina || ''),
+        arbitrosJson: JSON.stringify(estado.arbitros || {}),   // en texto: las claves de los partidos tienen puntos y barras
+    };
+}
+
+async function guardarProgramacion(comoNueva) {
+    const fb = nube();
+    if (!fb) { mostrarToast('Todavía no hay conexión con Firebase. Probá recargar la página.', 'error'); return; }
+    if (!String(estado.texto || '').trim()) { mostrarToast('Pegá una programación antes de guardar.', 'error'); return; }
+    const actualiza = !!estado.progId && !comoNueva;
+    const sugerido = (actualiza && estado.progNombre) || nombreSugerido();
+    const nombre = prompt(actualiza ? 'Nombre (se actualiza la programación guardada):' : 'Nombre de la programación:', sugerido);
+    if (nombre === null) return;
+
+    const botones = [$('btn-prog-guardar'), $('btn-prog-nueva')];
+    botones.forEach(b => { b.disabled = true; });
+    estadoNube('Nube: guardando…', 'espera');
+    try {
+        const datos = { ...datosProgramacion(), nombre: nombre.trim() || sugerido };
+        if (actualiza) {
+            try { await fb.programaciones.actualizar(estado.progId, datos); }
+            catch (err) {
+                // si la borraron desde otro lado, se vuelve a crear
+                if (String((err && err.code) || '').includes('not-found')) estado.progId = await fb.programaciones.crear(datos);
+                else throw err;
+            }
+        } else {
+            estado.progId = await fb.programaciones.crear(datos);
+        }
+        estado.progNombre = datos.nombre;
+        guardarEstado(); sincronizarBotonesProg();
+
+        // Imágenes de la pestaña en la que estás (flyers o planilla de árbitros). La programación ya quedó guardada.
+        let extra = '';
+        if (estado.subirFlyers && ikListo()) {
+            try {
+                const n = await subirImagenesProgramacion(estado.progId);
+                extra = n ? ` Se subieron ${n} ${n === 1 ? 'imagen' : 'imágenes'}.` : '';
+            } catch (err2) {
+                console.error('No se pudieron subir las imágenes:', err2);
+                estadoNube('Nube: error con las imágenes', 'error');
+                mostrarToast(`La programación se guardó, pero las imágenes no: ${mensajeErrorIk(err2)}`, 'error');
+                return;
+            }
+        } else if (estado.subirFlyers) {
+            extra = ' (Sin claves de ImageKit: no se subieron las imágenes.)';
+        }
+        estadoNube('Nube: conectada', 'ok');
+        mostrarToast((actualiza ? 'Programación actualizada.' : 'Programación guardada.') + extra);
+    } catch (err) {
+        console.error('No se pudo guardar la programación:', err);
+        estadoNube('Nube: error al guardar', 'error');
+        mostrarToast(mensajeErrorNube(err), 'error');
+    } finally {
+        botones.forEach(b => { b.disabled = false; });
+    }
+}
+
+// ---------- Historial ----------
+const fechaCorta = (ms) => ms ? new Date(ms).toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+
+async function cargarHistorial() {
+    const cont = $('lista-historial');
+    const fb = nube();
+    if (!fb) { cont.innerHTML = '<p class="campo-ayuda">Todavía no hay conexión con Firebase.</p>'; return; }
+    cont.innerHTML = '<p class="campo-ayuda">Cargando…</p>';
+    try {
+        if (!nubeListo) await iniciarNube();
+        historial = await fb.programaciones.listar(100);
+        pintarHistorial();
+    } catch (err) {
+        console.error('No se pudo leer el historial:', err);
+        cont.innerHTML = `<p class="arb-aviso">${esc(mensajeErrorNube(err))}</p>`;
+    }
+}
+
+const miniatura = (url, ancho) => `${url}${url.includes('?') ? '&' : '?'}tr=w-${ancho}`;
+function imagenesHtml(p) {
+    const lista = [...(Array.isArray(p.flyers) ? p.flyers : []), ...(Array.isArray(p.planilla) ? p.planilla : [])]
+        .filter(x => x && RE_IMG_URL.test(String(x.url || '')));
+    if (!lista.length) return '';
+    return `<div class="flex flex-wrap gap-2 mt-2">${lista.map(x => `<a href="${esc(x.url)}" target="_blank" rel="noopener" title="${esc(x.nombre || '')}"><img class="hist-mini" src="${esc(miniatura(x.url, 200))}" alt="" loading="lazy"></a>`).join('')}</div>`;
+}
+
+function pintarHistorial() {
+    const cont = $('lista-historial');
+    if (!historial.length) {
+        cont.innerHTML = '<p class="campo-ayuda">Todavía no hay programaciones guardadas. Armá una y tocá \"Guardar\".</p>';
+        return;
+    }
+    cont.innerHTML = historial.map(p => {
+        const abierta = estado.progId === p.id;
+        const editada = p.actualizada && p.creada && p.actualizada - p.creada > 60000 ? `editada ${fechaCorta(p.actualizada)}` : '';
+        const detalle = [`Guardada ${fechaCorta(p.creada)}`, editada, `${p.nPartidos || 0} partidos`, (DISENOS[p.diseno] || {}).label, (FORMATOS[p.formato] || {}).label].filter(Boolean).join(' · ');
+        return `<div class="hist-card ${abierta ? 'hist-abierta' : ''}" data-hid="${esc(p.id)}">
+            <div class="min-w-0 flex-1">
+                <p class="hist-nombre">${esc(p.nombre || 'Sin nombre')}${abierta ? ' <span style="color:#0673C8;">· abierta</span>' : ''}</p>
+                <p class="hist-detalle">${esc(detalle)}</p>
+                <details class="mt-1"><summary class="text-[0.68rem] font-extrabold text-slate-500 cursor-pointer">Ver texto</summary><pre class="hist-texto">${esc(p.texto)}</pre></details>
+                ${imagenesHtml(p)}
+            </div>
+            <div class="flex gap-2">
+                <button type="button" class="btn-sec" data-hist-abrir>Abrir</button>
+                <button type="button" class="btn-sec" data-hist-borrar>Borrar</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function llenarInputsArb() {
+    $('in-anio').value = estado.anio;
+    $('in-dia-def').value = estado.diaDefault;
+    $('chk-ordenar').checked = !!estado.ordenar;
+    $('in-nomina').value = estado.nomina;
+}
+
+function abrirProgramacion(id) {
+    const p = historial.find(x => x.id === id);
+    if (!p) return;
+    if (String(estado.texto || '').trim() && estado.texto !== p.texto && !confirm('Se va a reemplazar la programación que tenés en pantalla. ¿Seguir?')) return;
+    let arbitros = {};
+    try { const a = JSON.parse(p.arbitrosJson || '{}'); if (a && typeof a === 'object' && !Array.isArray(a)) arbitros = a; } catch (err) { /* queda vacío */ }
+
+    estado.texto = String(p.texto || '');
+    estado.titulo = String(p.titulo || '');
+    estado.fecha = String(p.fecha || '');
+    estado.pie = String(p.pie || '');
+    if (DISENOS[p.diseno]) estado.diseno = p.diseno;
+    if (FORMATOS[p.formato]) estado.formato = p.formato;
+    estado.logoTam = Math.max(50, Math.min(124, Number(p.logoTam) || 84));
+    estado.anio = Number(p.anio) || new Date().getFullYear();
+    estado.diaDefault = String(p.diaDefault || '');
+    estado.ordenar = p.ordenar !== false;
+    if (p.disenoArb === 'excel' || DISENOS[p.disenoArb]) estado.disenoArb = p.disenoArb;
+    estado.nomina = String(p.nomina || '');
+    estado.arbitros = arbitros;
+    estado.progId = p.id;
+    estado.progNombre = String(p.nombre || '');
+    estado.pestana = 'flyers';
+
+    guardarEstado();
+    llenarInputs(); llenarInputsArb();
+    sincronizarDiseno(); sincronizarFormato(); sincronizarEstiloArb(); sincronizarBotonesProg();
+    aplicarPestana('flyers');
+    renderActivo(true);
+    mostrarToast(`Abierta: ${p.nombre || 'programación'}`);
+}
+
+async function borrarProgramacion(id) {
+    const p = historial.find(x => x.id === id);
+    if (!p || !confirm(`¿Borrar "${p.nombre || 'esta programación'}" del historial? No se puede deshacer.`)) return;
+    try {
+        await nube().programaciones.borrar(id);
+        historial = historial.filter(x => x.id !== id);
+        if (estado.progId === id) { estado.progId = ''; estado.progNombre = ''; guardarEstado(); sincronizarBotonesProg(); }
+        pintarHistorial();
+        mostrarToast('Programación borrada.');
+    } catch (err) {
+        console.error('No se pudo borrar la programación:', err);
+        mostrarToast(mensajeErrorNube(err), 'error');
+    }
+}
+
+// ---------- ImageKit (escudos y PNG de las programaciones) ----------
+const ik = () => window.ik || null;
+const ikListo = () => !!(ik() && ik().configurado());
+const cacheEscudos = new Map();   // enlace https -> la misma imagen como data URL (para que entre en el PNG)
+const bajandoEscudos = new Map();   // enlace -> descarga en curso
+
+function mensajeErrorIk(err) {
+    const c = String((err && err.code) || '');
+    if (c === 'ik/sin-claves') return 'Faltan las claves de ImageKit.';
+    if (c === 'ik/401' || c === 'ik/403') return 'ImageKit rechazó las claves: revisalas.';
+    return `ImageKit: ${(err && err.message) || 'no se pudo subir la imagen'}`;
+}
+
+// Si ImageKit está configurado sube el escudo y devuelve su enlace; si no (o si falla) devuelve la imagen tal cual
+async function escudoParaGuardar(eq, dataUrl) {
+    if (!ikListo()) return dataUrl;
+    try {
+        return (await ik().subir(dataUrl, `escudo-${eq.id}.png`, '/escudos')).url;
+    } catch (err) {
+        console.error('No se pudo subir el escudo a ImageKit:', err);
+        mostrarToast(`${mensajeErrorIk(err)} El escudo se guardó dentro de Firestore.`, 'error');
+        return dataUrl;
+    }
+}
+
+// Baja una vez cada escudo de ImageKit y lo guarda como data URL. Devuelve true si cargó alguno nuevo.
+async function precargarEscudos() {
+    const urls = [...new Set(estado.equipos.map(e => e.escudo).filter(u => /^https:/i.test(u) && !cacheEscudos.has(u)))];
+    if (!urls.length) return false;
+    let nuevo = false;
+    await Promise.all(urls.map((u) => {
+        if (!bajandoEscudos.has(u)) {   // si otra pasada ya lo está bajando, se espera a esa
+            nuevo = true;
+            bajandoEscudos.set(u, (async () => {
+                try {
+                    const r = await fetch(u, { mode: 'cors' });
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    cacheEscudos.set(u, await blobADataURL(await r.blob()));
+                } catch (err) {
+                    console.warn('No se pudo bajar el escudo para el PNG:', u, err);
+                    cacheEscudos.set(u, u);   // queda el enlace tal cual
+                } finally {
+                    bajandoEscudos.delete(u);
+                }
+            })());
+        }
+        return bajandoEscudos.get(u);
+    }));
+    return nuevo;
+}
+
+// Genera los PNG de la pestaña activa (flyers o planilla), los sube y deja los enlaces en la programación
+async function subirImagenesProgramacion(id) {
+    const campo = estado.pestana === 'arbitros' ? 'planilla' : 'flyers';
+    clearTimeout(temporizador);
+    pendLista = false;
+    await renderActivo(false);
+    if (!flyersActuales.length) return 0;
+    estadoNube('Nube: generando imágenes…', 'espera');
+    const archivos = await generarArchivos(flyersActuales.map((_, i) => i));
+    const subidas = [];
+    for (let k = 0; k < archivos.length; k++) {
+        estadoNube(`Nube: subiendo imagen ${k + 1}/${archivos.length}…`, 'espera');
+        const r = await ik().subir(archivos[k].file, archivos[k].nombre, `/${campo}/${id}`);
+        subidas.push({ url: r.url, fileId: r.fileId, nombre: archivos[k].nombre });
+    }
+    await nube().programaciones.actualizar(id, { [campo]: subidas });
+    return subidas.length;
+}
+
+async function migrarEscudosAIk() {
+    if (!ikListo()) { mostrarToast('Primero cargá las claves de ImageKit.', 'error'); return; }
+    const pendientes = estado.equipos.filter(e => /^data:image\//i.test(e.escudo));
+    if (!pendientes.length) { mostrarToast('No hay escudos para mover: todos ya están en ImageKit o no tienen imagen.'); return; }
+    const boton = $('btn-ik-migrar');
+    boton.disabled = true;
+    let ok = 0, fallo = '';
+    try {
+        for (let i = 0; i < pendientes.length; i++) {
+            mostrarToast(`Subiendo escudo ${i + 1}/${pendientes.length}…`);
+            try {
+                pendientes[i].escudo = (await ik().subir(pendientes[i].escudo, `escudo-${pendientes[i].id}.png`, '/escudos')).url;
+                ok++;
+            } catch (err) {
+                console.error('No se pudo mover el escudo:', err);
+                fallo = mensajeErrorIk(err);
+                break;
+            }
+        }
+    } finally {
+        boton.disabled = false;
+    }
+    if (ok) { guardarEquipos(); construirEquipos(); renderActivo(false); }
+    if (fallo) mostrarToast(`Se movieron ${ok} de ${pendientes.length}. ${fallo}`, 'error');
+    else mostrarToast(`Listo: ${ok} ${ok === 1 ? 'escudo movido' : 'escudos movidos'} a ImageKit.`);
+}
+
+function actualizarEstadoIk() {
+    const api = ik(), c = api && api.claves();
+    const el = $('ik-estado');
+    el.textContent = !api ? 'No cargó imagekit-liga.js' : (c ? 'Claves cargadas' : 'Sin claves');
+    el.style.color = c ? '#0673C8' : '#b45309';
+    $('btn-ik-quitar').classList.toggle('hidden', !c);
+    $('in-ik-pub').value = c ? c.pub : '';
+    $('in-ik-priv').value = '';
+    $('in-ik-priv').placeholder = c ? '•••••• (guardada; escribí otra para cambiarla)' : 'private_...';
+}
+
+function iniciarImageKitUI() {
+    $('chk-subir-flyers').checked = !!estado.subirFlyers;
+    $('chk-subir-flyers').addEventListener('change', (e) => { estado.subirFlyers = e.target.checked; guardarEstado(); });
+    $('btn-ik-guardar').addEventListener('click', () => {
+        const api = ik();
+        if (!api) { mostrarToast('No cargó imagekit-liga.js: revisá que esté en la misma carpeta.', 'error'); return; }
+        const pub = $('in-ik-pub').value.trim();
+        const previa = api.claves();
+        const priv = $('in-ik-priv').value.trim() || (previa ? previa.priv : '');
+        if (!pub || !priv) { mostrarToast('Completá la public key y la private key.', 'error'); return; }
+        try { api.guardarClaves(pub, priv); }
+        catch (err) { mostrarToast('Este navegador no dejó guardar las claves.', 'error'); return; }
+        actualizarEstadoIk(); actualizarPanelEscudos();
+        mostrarToast('Claves guardadas en este navegador.');
+    });
+    $('btn-ik-quitar').addEventListener('click', () => {
+        if (!ik() || !confirm('¿Quitar las claves de ImageKit de este navegador?')) return;
+        ik().quitarClaves();
+        actualizarEstadoIk(); actualizarPanelEscudos();
+    });
+    $('btn-ik-migrar').addEventListener('click', migrarEscudosAIk);
+    actualizarEstadoIk();
+}
+
+function iniciarNubeUI() {
+    $('btn-prog-guardar').addEventListener('click', () => guardarProgramacion(false));
+    $('btn-prog-nueva').addEventListener('click', () => guardarProgramacion(true));
+    $('btn-hist-recargar').addEventListener('click', cargarHistorial);
+    $('lista-historial').addEventListener('click', (e) => {
+        const card = e.target.closest('[data-hid]');
+        if (!card) return;
+        if (e.target.closest('[data-hist-abrir]')) abrirProgramacion(card.dataset.hid);
+        else if (e.target.closest('[data-hist-borrar]')) borrarProgramacion(card.dataset.hid);
+    });
+    sincronizarBotonesProg();
+    // El módulo de Firebase carga después de este script: se espera su aviso (o se arranca si ya estaba)
+    window.addEventListener('fb-listo', iniciarNube);
+    if (nube()) iniciarNube();
+    else setTimeout(() => { if (!nube()) estadoNube('Nube: sin conexión', 'error'); }, 6000);
+}
+
 async function iniciar() {
     construirFormatos();
     construirDisenos();
@@ -1604,8 +2109,9 @@ async function iniciar() {
     $('btn-logo-tam-reset').addEventListener('click', () => { estado.logoTam = 84; guardarEstado(); llenarInputs(); render(); });
     $('in-logo').addEventListener('change', (e) => { leerLogo(e.target.files[0]); e.target.value = ''; });
     $('btn-logo-quitar').addEventListener('click', () => { estado.logoSubido = ''; guardarEstado(); llenarInputs(); render(); });
-    $('btn-ejemplo').addEventListener('click', () => { estado.texto = TEXTO_EJEMPLO; guardarEstado(); llenarInputs(); render(); });
-    $('btn-limpiar').addEventListener('click', () => { estado.texto = ''; guardarEstado(); llenarInputs(); render(); });
+    // Ejemplo y Borrar empiezan de cero: ya no se está editando una programación guardada
+    $('btn-ejemplo').addEventListener('click', () => { estado.texto = TEXTO_EJEMPLO; estado.progId = ''; estado.progNombre = ''; guardarEstado(); llenarInputs(); sincronizarBotonesProg(); render(); });
+    $('btn-limpiar').addEventListener('click', () => { estado.texto = ''; estado.progId = ''; estado.progNombre = ''; guardarEstado(); llenarInputs(); sincronizarBotonesProg(); render(); });
     $('previews').addEventListener('click', (e) => {
         const v = e.target.closest('[data-ver]');
         if (v) { abrirVisor(Number(v.dataset.ver)); return; }
@@ -1619,6 +2125,9 @@ async function iniciar() {
     iniciarArbitros();
     construirEquipos();
     iniciarEscudos();
+    iniciarBuscadorEscudos();
+    iniciarNubeUI();
+    iniciarImageKitUI();
 
     $('visor-cerrar').addEventListener('click', cerrarVisor);
     $('visor').addEventListener('click', (e) => { if (e.target === $('visor')) cerrarVisor(); });
