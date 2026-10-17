@@ -80,6 +80,18 @@
         .eq-escudo:hover { border-color: #0673C8; color: #0673C8; }
         .eq-escudo img { max-width: 90%; max-height: 90%; object-fit: contain; display: block; }
 
+        .nube-chip { font-size: 0.65rem; font-weight: 800; padding: 0.25rem 0.65rem; border-radius: 9999px; background: rgba(255,255,255,0.18); color: #e0f2fe; white-space: nowrap; }
+        .nube-chip[data-tipo="ok"] { background: #fff; color: #0673C8; }
+        .nube-chip[data-tipo="error"] { background: #fee2e2; color: #b91c1c; }
+
+        .hist-card { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 0.75rem 0.85rem; background: #fff; }
+        .hist-abierta { border-color: #0673C8; background: #eff8ff; }
+        .hist-nombre { font-size: 0.85rem; font-weight: 800; color: #0f172a; line-height: 1.2; }
+        .hist-detalle { font-size: 0.68rem; font-weight: 700; color: #94a3b8; margin-top: 0.15rem; }
+        .hist-texto { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.68rem; font-weight: 500; white-space: pre-wrap; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.6rem; padding: 0.5rem; margin-top: 0.4rem; max-height: 14rem; overflow: auto; }
+
+        .hist-mini { display: block; height: 5.5rem; width: auto; border-radius: 0.5rem; border: 1px solid #e2e8f0; background: #fff; }
+
         :focus-visible { outline: 2px solid #0673C8; outline-offset: 2px; }
         @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
     </style>
@@ -88,11 +100,15 @@
 
     <header style="background: linear-gradient(110deg, #0673C8, #35A7EA);" class="text-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-            <h1 class="text-base sm:text-lg font-extrabold italic uppercase tracking-tight leading-none">Flyers de programación</h1>
+            <div class="flex items-center justify-between gap-3">
+                <h1 class="text-base sm:text-lg font-extrabold italic uppercase tracking-tight leading-none">Flyers de programación</h1>
+                <span id="nube-estado" class="nube-chip" data-tipo="espera" role="status">Nube: conectando…</span>
+            </div>
             <p class="text-[0.7rem] font-semibold text-sky-100 mt-1">Liga A.F.O.CH · pegá la programación y descargá los flyers de la fecha o la planilla de árbitros</p>
             <nav class="flex gap-2 mt-3" role="tablist" aria-label="Secciones">
                 <button type="button" class="tab" role="tab" data-pestana="flyers">Flyers de partidos</button>
                 <button type="button" class="tab" role="tab" data-pestana="arbitros">Árbitros</button>
+                <button type="button" class="tab" role="tab" data-pestana="historial">Historial</button>
             </nav>
         </div>
     </header>
@@ -110,6 +126,11 @@
                         <button type="button" id="btn-ejemplo" class="btn-sec">Ejemplo</button>
                         <button type="button" id="btn-limpiar" class="btn-sec">Borrar</button>
                     </div>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap mb-3">
+                    <button type="button" id="btn-prog-guardar" class="btn-guardar !py-2 !px-4 !text-xs">Guardar</button>
+                    <button type="button" id="btn-prog-nueva" class="btn-sec hidden">Guardar como nueva</button>
+                    <span id="prog-estado" class="campo-ayuda !mt-0"></span>
                 </div>
                 <textarea id="in-texto" class="campo" rows="16" spellcheck="false" wrap="off" placeholder="1ra y Sub-20&#10;Zona Sur - Fecha 6&#10;• Villa Dora Vs. Avenida FC – Jueves 24/09 – 20:30 Hs"></textarea>
                 <p class="campo-ayuda">
@@ -183,6 +204,18 @@
                 </div>
                 <p id="escudos-resumen" class="text-[0.72rem] font-semibold text-slate-500"></p>
                 <p id="escudos-avisos" class="arb-aviso hidden"></p>
+                <div class="mt-3">
+                    <span class="campo-label">Agregar un equipo con su escudo</span>
+                    <div class="flex items-center gap-2">
+                        <label id="eq-nuevo-escudo" class="eq-escudo" title="Elegir el escudo">
+                            <span id="eq-nuevo-preview">+</span>
+                            <input id="in-eq-nuevo-file" type="file" accept="image/*" class="hidden">
+                        </label>
+                        <input id="in-eq-nuevo-nombre" type="text" class="campo campo-sm min-w-0 flex-1" placeholder="Nombre del equipo" autocomplete="off" maxlength="60">
+                        <button type="button" id="btn-eq-nuevo" class="btn-sec">Agregar</button>
+                    </div>
+                    <p class="campo-ayuda">Tocá el cuadro para elegir la imagen (si el nombre está vacío, se completa con el del archivo). Si el equipo ya existe, te pregunta si querés reemplazar su escudo.</p>
+                </div>
                 <div class="flex flex-wrap gap-2 mt-3">
                     <button type="button" id="btn-eq-prog" class="btn-sec">Traer equipos de la programación</button>
                     <label class="btn-sec cursor-pointer">
@@ -196,6 +229,13 @@
                     <button type="button" id="btn-eq-agregar" class="btn-sec mt-2">Agregar a la lista</button>
                     <p class="campo-ayuda">Un equipo por renglón. Si se escribe distinto en la programación, ponelo después de una barra <b>|</b> (podés poner varios separados por coma).</p>
                 </details>
+                <div class="flex items-center gap-2 mt-3">
+                    <input id="in-eq-buscar" type="search" class="campo campo-sm min-w-0 flex-1" placeholder="Buscar equipo…" autocomplete="off" aria-label="Buscar equipo">
+                    <span id="eq-contador" class="campo-ayuda !mt-0 whitespace-nowrap"></span>
+                </div>
+                <label class="flex items-center gap-2 mt-2 text-[0.72rem] font-bold text-slate-600 cursor-pointer">
+                    <input id="chk-eq-sin" type="checkbox" class="accent-liga"> Mostrar solo los que no tienen escudo
+                </label>
                 <div id="lista-equipos" class="flex flex-col gap-2 mt-3 max-h-[50vh] overflow-y-auto pr-1"></div>
                 <div class="flex flex-wrap items-center gap-2 mt-3">
                     <button type="button" id="btn-eq-copia" class="btn-sec">Guardar copia</button>
@@ -204,7 +244,37 @@
                         <input id="in-eq-copia" type="file" accept="application/json,.json" class="hidden">
                     </label>
                 </div>
-                <p class="campo-ayuda">El nombre se reconoce aunque cambie la mayúscula, la tilde, el "FC" o venga abreviado ("Dep." / "M. Ugarte"). Los escudos se guardan en este navegador: hacé una copia para tenerlos en otra compu o por si se borran los datos. Con escudos, los flyers usan renglones más altos (entran menos partidos por flyer).</p>
+                <p class="campo-ayuda">El nombre se reconoce aunque cambie la mayúscula, la tilde, el "FC" o venga abreviado ("Dep." / "M. Ugarte"). Los escudos se guardan en este navegador y en la nube, así que los tenés en cualquier compu. "Guardar copia" queda como respaldo. Con escudos, los flyers usan renglones más altos (entran menos partidos por flyer).</p>
+            </section>
+
+            <section class="seccion" id="sec-imagekit">
+                <div class="flex items-center justify-between gap-2 mb-2">
+                    <h2 class="seccion-titulo !mb-0">Imágenes en la nube (ImageKit)</h2>
+                    <span id="ik-estado" class="text-[0.7rem] font-extrabold"></span>
+                </div>
+                <p class="campo-ayuda !mt-0 mb-3">Con las claves cargadas, los escudos nuevos y los PNG de las programaciones que guardes se suben a ImageKit. Sin claves, los escudos se guardan como imagen dentro de Firestore y los flyers no se suben.</p>
+                <details>
+                    <summary class="text-[0.72rem] font-extrabold text-slate-600 cursor-pointer">Claves de ImageKit</summary>
+                    <div class="flex flex-col gap-3 mt-2">
+                        <div>
+                            <label class="campo-label" for="in-ik-pub">Public key</label>
+                            <input id="in-ik-pub" class="campo" type="text" placeholder="public_..." autocomplete="off" spellcheck="false">
+                        </div>
+                        <div>
+                            <label class="campo-label" for="in-ik-priv">Private key</label>
+                            <input id="in-ik-priv" class="campo" type="password" placeholder="private_..." autocomplete="off" spellcheck="false">
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" id="btn-ik-guardar" class="btn-sec">Guardar claves</button>
+                            <button type="button" id="btn-ik-quitar" class="btn-sec hidden">Quitar</button>
+                        </div>
+                    </div>
+                    <p class="campo-ayuda">Las claves se guardan solo en este navegador (no en el código ni en Firebase). La firma de cada subida se calcula acá mismo, así que no abras esta página en una compu que no sea tuya.</p>
+                </details>
+                <label class="flex items-center gap-2 mt-3 text-xs font-bold text-slate-700 cursor-pointer">
+                    <input id="chk-subir-flyers" type="checkbox" class="accent-liga"> Subir los PNG a ImageKit al guardar una programación
+                </label>
+                <button type="button" id="btn-ik-migrar" class="btn-sec mt-3">Mover a ImageKit los escudos guardados como imagen</button>
             </section>
         </div>
 
@@ -218,7 +288,7 @@
                 </button>
             </div>
             <div id="previews" class="grid gap-5 justify-items-center bg-slate-50 rounded-2xl border border-slate-200 p-5" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));"></div>
-            <p class="text-[0.7rem] font-semibold text-slate-400">Se descargan en PNG de 1080 px de ancho, uno por flyer. Tu trabajo se guarda solo en este navegador.</p>
+            <p class="text-[0.7rem] font-semibold text-slate-400">Se descargan en PNG de 1080 px de ancho, uno por flyer. Tu trabajo se guarda en este navegador; para conservarlo en la nube tocá Guardar (después lo ves en Historial).</p>
         </div>
     </main>
 
@@ -281,6 +351,18 @@
         </div>
     </main>
 
+    <!-- ============ PESTAÑA HISTORIAL ============ -->
+    <main id="vista-historial" class="hidden max-w-3xl mx-auto px-4 sm:px-6 py-5">
+        <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+            <div>
+                <h2 class="text-sm font-extrabold text-slate-800">Programaciones guardadas</h2>
+                <p class="campo-ayuda !mt-0.5">Las últimas 100, de la más nueva a la más vieja. "Abrir" la carga en el generador para editarla o volver a descargar los flyers.</p>
+            </div>
+            <button type="button" id="btn-hist-recargar" class="btn-sec">Actualizar</button>
+        </div>
+        <div id="lista-historial" class="flex flex-col gap-2"></div>
+    </main>
+
     <!-- Copias a tamaño real, fuera de pantalla: de acá sale el PNG -->
     <div id="export" style="position:fixed; left:-20000px; top:0; pointer-events:none;" aria-hidden="true"></div>
 
@@ -298,6 +380,9 @@
 
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
+    <!-- Firebase (módulo): deja listo window.fb. Hay que abrir la página desde un servidor, no con doble clic. -->
+    <script type="module" src="firebase-liga.js"></script>
+    <script src="imagekit-liga.js"></script>
     <script src="flyers-liga.js"></script>
 </body>
 </html>
