@@ -160,12 +160,28 @@ const H = { cat: 40, zona: 26, fila: 28, sede: 15 };   // sede = renglón extra 
 const costoFila = (f) => H.fila + (f && f.nota && f.l ? H.sede : 0);
 // Con escudos las filas son más altas para que el escudo se vea bien (se decide en render())
 const H_FILA = { normal: 28, escudos: 36 };
-const CAB_H = 128;   // alto de la cabecera celeste
-const PIE_H = 38;    // alto de la barra inferior
+let CAB_H = 128;   // alto de la cabecera celeste (cambia con la densidad)
+let PIE_H = 38;    // alto de la barra inferior (cambia con la densidad)
 const PAD_SUP = 10;
 const PAD_INF = 14;
 const MARGEN = 24;   // margen lateral
-const MANTENER_JUNTAS = 5;  // zonas de hasta N partidos se mantienen en un solo flyer
+let MANTENER_JUNTAS = 5;  // zonas de hasta N partidos se mantienen en un solo flyer (cambia con la densidad)
+
+// Densidad: cuántos partidos entran por flyer. "Normal" es el tamaño de siempre; las otras achican
+// renglones, cabecera, pie y letra para que salgan menos imágenes.
+const DENSIDADES = {
+    normal:   { label: 'Normal',       sub: 'Letra grande',        cab: 128, pie: 38, fila: 28, filaEsc: 36, cat: 40, zona: 26, sede: 15, juntas: 5, fs: 1,    tit: 1,    logo: 1,    pieFs: 1 },
+    compacta: { label: 'Compacta',     sub: 'Más partidos',        cab: 104, pie: 30, fila: 24, filaEsc: 30, cat: 32, zona: 22, sede: 13, juntas: 3, fs: 0.9,  tit: 0.82, logo: 0.85, pieFs: 0.9 },
+    minima:   { label: 'Muy compacta', sub: 'El máximo por flyer', cab: 88,  pie: 26, fila: 21, filaEsc: 26, cat: 28, zona: 19, sede: 12, juntas: 2, fs: 0.8,  tit: 0.7,  logo: 0.7,  pieFs: 0.82 },
+};
+let DENS = DENSIDADES.normal;
+// Deja activa la densidad `id`. El alto de las filas (H.fila) lo fija render() según haya escudos o no.
+function aplicarDensidad(id) {
+    DENS = DENSIDADES[id] || DENSIDADES.normal;
+    H.cat = DENS.cat; H.zona = DENS.zona; H.sede = DENS.sede;
+    CAB_H = DENS.cab; PIE_H = DENS.pie; MANTENER_JUNTAS = DENS.juntas;
+    return DENS;
+}
 
 // Se diseña a 540 px de ancho y se exporta al doble (1080 px).
 const ANCHO_SALIDA = 1080;
@@ -460,7 +476,7 @@ function logoHtml(logo, tam = 84) {
 function itemHtml(it, sc, ctx) {
     if (it.t === 'html') return it.html;   // bloque ya armado (lo usa la pestaña Posiciones)
     if (it.t === 'cat') {
-        const tam = ajustar(it.txt, 24 * sc, 440, 0.46);
+        const tam = ajustar(it.txt, 24 * sc * DENS.fs, 440, 0.46);
         const pildora = TEMA.cat === 'pildora';
         const plana = TEMA.cat === 'plana' || pildora;
         const barra = pildora
@@ -469,7 +485,7 @@ function itemHtml(it, sc, ctx) {
             ? `height:100%; background:linear-gradient(90deg, ${COLOR.celeste}, ${COLOR.celesteClaro}); border-left:7px solid ${COLOR.cabBorde}; border-radius:2px; display:flex; align-items:center; padding:0 14px; box-sizing:border-box;`
             : `height:100%; background:linear-gradient(90deg, ${COLOR.celeste}, ${COLOR.celesteClaro}); transform:skewX(-10deg); border-radius:4px; display:flex; align-items:center; padding:0 18px; box-shadow:3px 3px 0 ${COLOR.catSombra};`;
         const txt = plana ? '' : 'transform:skewX(10deg);';
-        return `<div style="height:${px(H.cat * sc)}; padding-top:${px(10 * sc)}; box-sizing:border-box;">
+        return `<div style="height:${px(H.cat * sc)}; padding-top:${px(10 * sc * (H.cat / 40))}; box-sizing:border-box;">
             <div style="${barra}">
                 <span style="display:block; ${txt} font-family:${TITULAR}; font-size:${px(tam)}; line-height:1; color:${COLOR.catTexto}; letter-spacing:0.04em; white-space:nowrap; text-transform:uppercase;">${esc(it.txt)}</span>
             </div></div>`;
@@ -477,7 +493,7 @@ function itemHtml(it, sc, ctx) {
     if (it.t === 'zona') {
         return `<div style="height:${px(H.zona * sc)}; display:flex; align-items:center; gap:8px; padding:0 4px; box-sizing:border-box;">
             <span style="width:8px; height:8px; background:${COLOR.celeste}; transform:rotate(45deg); flex-shrink:0;"></span>
-            <span style="font-family:${TEXTO}; font-weight:800; font-size:${px(15 * sc)}; line-height:1; letter-spacing:0.07em; color:${COLOR.tinta}; text-transform:uppercase; white-space:nowrap;">${esc(it.txt)}</span>
+            <span style="font-family:${TEXTO}; font-weight:800; font-size:${px(15 * sc * DENS.fs)}; line-height:1; letter-spacing:0.07em; color:${COLOR.tinta}; text-transform:uppercase; white-space:nowrap;">${esc(it.txt)}</span>
             <span style="flex:1; height:2px; background:${COLOR.celesteSuave}; border-radius:2px;"></span>
         </div>`;
     }
@@ -494,7 +510,7 @@ function itemHtml(it, sc, ctx) {
     const base = tarjeta
         ? `height:${altoTotal}; background:${COLOR.celesteFondo}; background-clip:padding-box; border-top:2px solid transparent; border-bottom:2px solid transparent; border-radius:12px; box-shadow:inset 0 0 0 1px ${COLOR.celesteSuave}, inset 4px 0 0 0 ${COLOR.celeste}; padding:0 10px; box-sizing:border-box;`
         : `height:${altoTotal}; background:${linea ? 'transparent' : fondo}; ${linea ? `border-bottom:1px solid ${COLOR.celesteSuave};` : 'border-radius:6px;'} padding:0 6px; box-sizing:border-box;`;
-    const k = Math.min(sc, 1.1);   // las columnas de día y hora crecen menos que el resto
+    const k = Math.min(sc, 1.1) * DENS.fs;   // las columnas de día y hora crecen menos que el resto
     // Los estados (PEN, A CONF...) se ven con borde punteado en lugar de relleno
     const estiloHora = it.pend
         ? `background:transparent; border:1.5px dashed ${COLOR.acento}; color:${COLOR.acento};`
@@ -507,7 +523,7 @@ function itemHtml(it, sc, ctx) {
         ? `<div style="display:flex; align-items:center; justify-content:flex-start;">${it.hora ? `<span style="display:block; width:100%; box-sizing:border-box; text-align:center; ${estiloHora} font-family:${TITULAR}; font-size:${px(14 * k)}; line-height:1; padding:3px 0 2px; border-radius:${rChip}; letter-spacing:0.04em;">${esc(it.hora)}</span>` : ''}</div>`
         : '';
     if (it.texto) {
-        const tam = ajustar(it.texto, 18 * sc, 440, 0.44);
+        const tam = ajustar(it.texto, 18 * sc * DENS.fs, 440, 0.44);
         return `<div style="${base} display:flex; align-items:center; justify-content:center; gap:10px;">
             ${it.dia ? `<span style="color:${COLOR.acento}; font-family:${TEXTO}; font-weight:800; font-size:${px(13 * k)}; line-height:1; white-space:nowrap;">${esc(it.dia)}</span>` : ''}
             ${it.hora ? `<span style="${estiloHora} font-family:${TITULAR}; font-size:${px(14 * k)}; line-height:1; padding:3px 6px 2px; border-radius:${rChip};">${esc(it.hora)}</span>` : ''}
@@ -520,7 +536,7 @@ function itemHtml(it, sc, ctx) {
     const escGap = 6;
     const anchoNombre = (ctx.anchoUtil - 12 - 38 - reservado - (columnas - 1) * 6) / 2 - 2 - (escT ? escT + escGap : 0);
     const nombre = (txt, align) => {
-        const tam = ajustar(txt, 18 * sc, anchoNombre, 0.45);
+        const tam = ajustar(txt, 18 * sc * DENS.fs, anchoNombre, 0.45);
         const estiloTxt = `font-family:${TEXTO}; font-weight:800; font-size:${px(tam)}; line-height:1; color:${COLOR.tinta}; text-transform:uppercase; letter-spacing:0.02em; white-space:nowrap; overflow:hidden;`;
         if (!escT) return `<div style="text-align:${align}; ${estiloTxt}">${esc(txt)}</div>`;
         const url = ctx.escudoDe ? ctx.escudoDe(txt) : '';
@@ -539,7 +555,7 @@ function itemHtml(it, sc, ctx) {
         <div style="height:${alto}; ${tarjeta ? 'margin-top:-2px; ' : ''}display:grid; grid-template-columns:${cols}; align-items:center; column-gap:6px;">
             ${dia}${hora}
             ${nombre(it.l, 'right')}
-            <div style="display:flex; justify-content:center;"><span style="font-family:${TITULAR}; font-size:${px(12 * sc)}; line-height:1; color:${COLOR.acento}; background:${COLOR.chipBg}; border:1.5px solid ${COLOR.celesteSuave}; border-radius:9999px; padding:3px 6px 2px; letter-spacing:0.05em;">VS</span></div>
+            <div style="display:flex; justify-content:center;"><span style="font-family:${TITULAR}; font-size:${px(12 * sc * DENS.fs)}; line-height:1; color:${COLOR.acento}; background:${COLOR.chipBg}; border:1.5px solid ${COLOR.celesteSuave}; border-radius:9999px; padding:3px 6px 2px; letter-spacing:0.05em;">VS</span></div>
             ${nombre(it.v, 'left')}
         </div>${sede}
     </div>`;
@@ -548,8 +564,11 @@ function itemHtml(it, sc, ctx) {
 function htmlFlyer(pag, i, total, c) {
     aplicarDiseno(c.diseno);
     const f = c.f;
-    const tamLogo = Math.max(50, Math.min(124, Number(c.logoTam) || 84));   // diámetro del logo (px de diseño)
-    const topLogo = f.seguroSup + Math.max(4, Math.round(60 - tamLogo / 2));
+    const tamLogo = Math.max(40, Math.round(Math.max(50, Math.min(124, Number(c.logoTam) || 84)) * DENS.logo));   // diámetro del logo (px de diseño)
+    const centroCab = Math.round(CAB_H * 0.47);   // línea central del logo y el título dentro de la cabecera
+    const altoTit = Math.round(CAB_H * 0.656);
+    const topTit = f.seguroSup + Math.round(centroCab - altoTit / 2);
+    const topLogo = f.seguroSup + Math.max(4, Math.round(centroCab - tamLogo / 2));
     const curva = TEMA.cab === 'curva';
     const recta = TEMA.cab === 'recta' || curva;
     const radCab = curva ? 'border-radius:0 0 30px 30px;' : '';
@@ -576,7 +595,7 @@ function htmlFlyer(pag, i, total, c) {
     const lineasTitulo = (c.titulo || '').split('\n').map(s => s.trim()).filter(Boolean);
     const maxLinea = Math.max(...lineasTitulo.map(s => s.length), 1);
     const anchoTitulo = f.ancho - (MARGEN + tamLogo + 14) - MARGEN;
-    const tamTitulo = Math.min(lineasTitulo.length > 1 ? 36 : 46, anchoTitulo / (maxLinea * 0.44));
+    const tamTitulo = Math.min((lineasTitulo.length > 1 ? 36 : 46) * DENS.tit, anchoTitulo / (maxLinea * 0.44));
     const tituloHtml = lineasTitulo.map(s => esc(s)).join('<br>');
 
     const fecha = (c.fecha || '').trim();
@@ -593,9 +612,9 @@ function htmlFlyer(pag, i, total, c) {
         <div style="position:absolute; left:0; top:0; width:100%; height:${CAB_H + f.seguroSup + 10}px; background:${COLOR.cabBorde}; ${radCab} clip-path:${cabAtras};"></div>
         <div style="position:absolute; left:0; top:0; width:100%; height:${CAB_H + f.seguroSup}px; background:linear-gradient(110deg, ${COLOR.cabA} 0%, ${COLOR.cabB} 100%); ${radCab} clip-path:${cabFrente};"></div>
         <div style="position:absolute; left:${MARGEN}px; top:${topLogo}px;">${logoHtml(c.logo, tamLogo)}</div>
-        <div style="position:absolute; left:${MARGEN + tamLogo + 14}px; top:${f.seguroSup + 18}px; width:${anchoTitulo}px; height:84px; display:flex; flex-direction:column; justify-content:center;">
+        <div style="position:absolute; left:${MARGEN + tamLogo + 14}px; top:${topTit}px; width:${anchoTitulo}px; height:${altoTit}px; display:flex; flex-direction:column; justify-content:center;">
             <div style="font-family:${TITULAR}; font-size:${px(tamTitulo)}; line-height:0.98; color:${COLOR.cabTexto}; letter-spacing:0.03em; text-shadow:2px 2px 0 ${COLOR.sombraTitulo}; text-transform:uppercase;">${tituloHtml}</div>
-            ${fecha ? `<div style="margin-top:7px;"><span style="display:inline-block; background:${COLOR.chipBg}; color:${COLOR.acento}; font-family:${TEXTO}; font-weight:800; font-size:15px; line-height:1; padding:4px 12px; border-radius:9999px; letter-spacing:0.08em; text-transform:uppercase; white-space:nowrap;">${esc(fecha)}</span></div>` : ''}
+            ${fecha ? `<div style="margin-top:${Math.round(7 * DENS.tit)}px;"><span style="display:inline-block; background:${COLOR.chipBg}; color:${COLOR.acento}; font-family:${TEXTO}; font-weight:800; font-size:${Math.round(15 * DENS.tit)}px; line-height:1; padding:${Math.round(4 * DENS.tit)}px 12px; border-radius:9999px; letter-spacing:0.08em; text-transform:uppercase; white-space:nowrap;">${esc(fecha)}</span></div>` : ''}
         </div>
 
         <!-- Partidos -->
@@ -604,9 +623,9 @@ function htmlFlyer(pag, i, total, c) {
         <!-- Barra inferior -->
         <div style="position:absolute; left:0; bottom:0; width:100%; height:${PIE_H + f.seguroInf + 10}px; background:${COLOR.pieBorde}; ${radPie} clip-path:${pieAtras};"></div>
         <div style="position:absolute; left:0; bottom:0; width:100%; height:${PIE_H + f.seguroInf}px; background:linear-gradient(110deg, ${COLOR.pieA} 0%, ${COLOR.pieB} 100%); ${radPie} clip-path:${pieFrente};"></div>
-        <div style="position:absolute; left:${MARGEN}px; right:${MARGEN}px; bottom:${f.seguroInf}px; height:${PIE_H}px; display:flex; align-items:center; justify-content:space-between; padding-top:8px; box-sizing:border-box;">
-            <span style="font-family:${TEXTO}; font-weight:800; font-size:15px; letter-spacing:0.1em; color:${COLOR.cabTexto}; text-transform:uppercase; white-space:nowrap;">${esc(pie)}</span>
-            <span style="font-family:${TITULAR}; font-size:20px; letter-spacing:0.06em; color:${COLOR.cabTexto};">${contador}</span>
+        <div style="position:absolute; left:${MARGEN}px; right:${MARGEN}px; bottom:${f.seguroInf}px; height:${PIE_H}px; display:flex; align-items:center; justify-content:space-between; padding-top:${Math.round(8 * PIE_H / 38)}px; box-sizing:border-box;">
+            <span style="font-family:${TEXTO}; font-weight:800; font-size:${Math.round(15 * DENS.pieFs)}px; letter-spacing:0.1em; color:${COLOR.cabTexto}; text-transform:uppercase; white-space:nowrap;">${esc(pie)}</span>
+            <span style="font-family:${TITULAR}; font-size:${Math.round(20 * DENS.pieFs)}px; letter-spacing:0.06em; color:${COLOR.cabTexto};">${contador}</span>
         </div>
     </div>`;
 }
@@ -817,7 +836,7 @@ function htmlPlanilla(pag, i, total, c) {
 
 // Fuera del navegador (tests en Node) exportamos solo la lógica pura
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { parsearProgramacion, parsearFila, paginarCon, repartir, alturaUtil, FORMATOS, H, htmlFlyer, DISENOS, aplicarDiseno,
+    module.exports = { parsearProgramacion, parsearFila, paginarCon, repartir, alturaUtil, FORMATOS, H, htmlFlyer, DISENOS, aplicarDiseno, DENSIDADES, aplicarDensidad,
         armarPartidos, agruparDias, paginarPlanilla, repartirPlanilla, htmlPlanilla, paletaPlanilla, fechaDe, sedeDeTitulo, A, crearBuscador, tokensEquipo };
 }
 
@@ -871,6 +890,7 @@ Veteranos +40  Fecha 4 – Sábado - Dep. Comercio (Local)
 const ESTADO_INICIAL = {
     formato: 'vertical',
     diseno: 'clasico',
+    densidad: 'compacta',   // cuántos partidos entran por flyer (ver DENSIDADES)
     logoTam: 84,
     texto: TEXTO_EJEMPLO,       // programación de la pestaña Flyers
     textoArb: TEXTO_EJEMPLO,    // programación de la pestaña Árbitros (independiente de la de flyers)
@@ -913,6 +933,7 @@ function cargarEstado() {
             const e = { ...ESTADO_INICIAL, ...g };
             if (!FORMATOS[e.formato]) e.formato = ESTADO_INICIAL.formato;
             if (!DISENOS[e.diseno]) e.diseno = ESTADO_INICIAL.diseno;
+            if (!DENSIDADES[e.densidad]) e.densidad = ESTADO_INICIAL.densidad;
             e.logoTam = Math.max(50, Math.min(124, Number(e.logoTam) || 84));
             if (e.pestana !== 'arbitros' && e.pestana !== 'tabla') e.pestana = 'flyers';
             const tb = e.tabla;
@@ -1000,11 +1021,18 @@ let temporizador = null;
 
 async function render() {
     await cargarLogoArchivo();
+    // La densidad solo vale mientras se arman los flyers (el resto, como la tabla de posiciones, sigue con medidas normales)
+    aplicarDensidad(estado.densidad);
+    let hayEscudos = false;
+    try { hayEscudos = renderFlyers(); }
+    finally { aplicarDensidad('normal'); H.fila = hayEscudos ? H_FILA.escudos : H_FILA.normal; }
+}
+function renderFlyers() {
     const f = FORMATOS[estado.formato];
     const bloques = parsearProgramacion(estado.texto);
     // Escudos: si hay al menos uno cargado, las filas se hacen más altas (antes de repartir los partidos)
     const hayEscudos = !!estado.usarEscudos && estado.equipos.some(e => e.escudo);
-    H.fila = hayEscudos ? H_FILA.escudos : H_FILA.normal;
+    H.fila = hayEscudos ? DENS.filaEsc : DENS.fila;
     const buscarEq = hayEscudos ? crearBuscador(estado.equipos) : null;
     const escudoDe = buscarEq ? (n) => { const e = buscarEq(n); const u = (e && e.escudo) || ''; return cacheEscudos.get(u) || u; } : null;
     if (hayEscudos) precargarEscudos().then(cambio => { if (cambio) renderDiferido(false); });
@@ -1043,6 +1071,7 @@ async function render() {
         nodo: $('export').querySelector(`[data-flyer="${i}"]`),
     }));
     if (visorIdx >= 0) pintarVisor();   // si la vista ampliada está abierta, se actualiza
+    return hayEscudos;
 }
 
 // ---------- Vista ampliada (para leer bien sin descargar) ----------
@@ -1213,6 +1242,16 @@ function construirFormatos() {
             <span class="tile-label">${f.label}</span><span class="tile-sub">${f.sub}</span>
         </button>`).join('');
     sincronizarFormato();
+}
+function construirDensidades() {
+    $('tiles-densidad').innerHTML = Object.entries(DENSIDADES).map(([k, d]) => `
+        <button type="button" class="tile" data-densidad="${k}">
+            <span class="tile-label">${d.label}</span><span class="tile-sub">${d.sub}</span>
+        </button>`).join('');
+    sincronizarDensidad();
+}
+function sincronizarDensidad() {
+    document.querySelectorAll('[data-densidad]').forEach(b => b.classList.toggle('tile-activo', b.dataset.densidad === estado.densidad));
 }
 function construirDisenos() {
     $('tiles-diseno').innerHTML = Object.entries(DISENOS).map(([k, d]) => {
@@ -1870,6 +1909,7 @@ function datosProgramacion(t) {
         pie: String(estado.pie || ''),
         diseno: estado.diseno,
         formato: estado.formato,
+        densidad: estado.densidad,
         logoTam: estado.logoTam,
         nPartidos: parsearProgramacion(estado.texto).reduce((a, b) => a + b.filas.length, 0),
     };
@@ -2021,6 +2061,7 @@ function abrirProgramacion(id) {
         estado.pie = String(p.pie || '');
         if (DISENOS[p.diseno]) estado.diseno = p.diseno;
         if (FORMATOS[p.formato]) estado.formato = p.formato;
+        estado.densidad = DENSIDADES[p.densidad] ? p.densidad : 'normal';   // lo guardado antes de existir la opción se hizo en tamaño normal
         estado.logoTam = Math.max(50, Math.min(124, Number(p.logoTam) || 84));
     }
     if (tipo !== 'flyers') {
@@ -2042,7 +2083,7 @@ function abrirProgramacion(id) {
 
     guardarEstado();
     llenarInputs(); llenarInputsArb();
-    sincronizarDiseno(); sincronizarFormato(); sincronizarEstiloArb(); sincronizarBotonesProg();
+    sincronizarDiseno(); sincronizarFormato(); sincronizarDensidad(); sincronizarEstiloArb(); sincronizarBotonesProg();
     aplicarPestana(estado.pestana);
     renderActivo(true);
     mostrarToast(`Abierta: ${p.nombre || 'programación'}${tipo === 'mixto' ? ' (se carga en las dos pestañas; al guardar se crean registros nuevos)' : ''}`);
@@ -2216,6 +2257,7 @@ function iniciarNubeUI() {
 
 async function iniciar() {
     construirFormatos();
+    construirDensidades();
     construirDisenos();
     llenarInputs();
 
@@ -2230,6 +2272,12 @@ async function iniciar() {
     $('in-titulo').addEventListener('input', (e) => { estado.titulo = e.target.value; guardarEstado(); renderDiferido(); });
     $('in-fecha').addEventListener('input', (e) => { estado.fecha = e.target.value; guardarEstado(); renderDiferido(); });
     $('in-pie').addEventListener('input', (e) => { estado.pie = e.target.value; guardarEstado(); renderDiferido(); });
+    $('tiles-densidad').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-densidad]');
+        if (!b) return;
+        estado.densidad = b.dataset.densidad;
+        guardarEstado(); sincronizarDensidad(); render();
+    });
     $('tiles-formato').addEventListener('click', (e) => {
         const b = e.target.closest('[data-formato]');
         if (!b) return;
