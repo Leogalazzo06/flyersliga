@@ -7,12 +7,13 @@
 //
 // Colecciones de Firestore:
 //   equipos/{id}          -> { nombre, alias, escudo }
+//   tablas/actual         -> { base, titulo, fechas[{etiqueta, texto}], actualizada }
 //   programaciones/{id}   -> { nombre, texto, titulo, fecha, pie, diseno, formato, ...,
 //                              creada, actualizada }
 // ============================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
 import {
-    getFirestore, collection, doc, addDoc, updateDoc, getDocs, deleteDoc,
+    getFirestore, collection, doc, addDoc, updateDoc, getDocs, deleteDoc, getDoc, setDoc,
     query, orderBy, limit, serverTimestamp, writeBatch,
 } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 
@@ -43,6 +44,12 @@ async function enLotes(operaciones, tam = 100) {
 }
 
 window.fb = {
+    // Tabla de posiciones: un solo documento (tablas/actual) con la base y los resultados por fecha
+    tabla: {
+        async cargar() { const s = await getDoc(doc(db, "tablas", "actual")); return s.exists() ? s.data() : null; },
+        async guardar(datos) { await setDoc(doc(db, "tablas", "actual"), { ...datos, actualizada: serverTimestamp() }); },
+    },
+
     equipos: {
         async listar() {
             const snap = await getDocs(colEquipos);
