@@ -45,7 +45,8 @@ const BASE_COLORES = {
 };
 
 // Diseños disponibles. Además de los colores, cambian la forma de la cabecera
-// ('diagonal' | 'recta'), de la barra de categoría ('inclinada' | 'plana') y de las filas ('cinta' | 'linea').
+// ('diagonal' | 'recta' | 'curva'), de la barra de categoría ('inclinada' | 'plana' | 'pildora'), de las filas ('cinta' | 'linea' | 'tarjeta')
+// y de los chips de hora ('pildora' = redondeados).
 const DISENOS = {
     clasico: { label: 'Celeste clásico', sub: 'Blanco y celeste',
         cab: 'diagonal', cat: 'inclinada', fila: 'cinta', marca: true, colores: {} },
@@ -90,6 +91,52 @@ const DISENOS = {
             chipTexto: '#0A2540', catTexto: '#0A2540', catSombra: '#0A2540',
             cabA: '#0A2540', cabB: '#16406B', cabBorde: '#C9A227', pieA: '#16406B', pieB: '#0A2540', pieBorde: '#C9A227',
             sombraTitulo: 'rgba(0,0,0,0.5)', logoSombra: 'rgba(201,162,39,0.6)', logoTexto: '#0A2540', marca: '#C9A227',
+        } },
+    // ---- Diseños modernos: cabecera curva, categorías en píldora, partidos en tarjetas ----
+    aurora: { label: 'Aurora', sub: 'Violeta y fucsia sobre oscuro',
+        cab: 'curva', cat: 'pildora', fila: 'tarjeta', chip: 'pildora', marca: false,
+        colores: {
+            fondo: '#0F0A24', tinta: '#F3EEFF', celeste: '#8B5CF6', celesteClaro: '#D946EF',
+            celesteSuave: '#3A2D75', celesteFondo: '#1B1342', azul: '#A78BFA', acento: '#C4B5FD',
+            chipBg: '#1B1342', chipTexto: '#FFFFFF', catTexto: '#FFFFFF', catSombra: 'rgba(0,0,0,0)',
+            cabA: '#5B21B6', cabB: '#C026D3', cabBorde: '#D946EF', pieA: '#C026D3', pieB: '#5B21B6', pieBorde: '#8B5CF6',
+            sombraTitulo: 'rgba(0,0,0,0)', logoSombra: 'rgba(217,70,239,0.5)', logoTexto: '#5B21B6', marca: '#8B5CF6',
+        } },
+    grafito: { label: 'Grafito y lima', sub: 'Oscuro con acento lima',
+        cab: 'recta', cat: 'plana', fila: 'tarjeta', chip: 'pildora', marca: false,
+        colores: {
+            fondo: '#101114', tinta: '#F4F5F7', celeste: '#A3E635', celesteClaro: '#D9F99D',
+            celesteSuave: '#2F3239', celesteFondo: '#1A1C21', azul: '#A3E635', acento: '#BEF264',
+            chipBg: '#1A1C21', chipTexto: '#101114', catTexto: '#101114', catSombra: 'rgba(0,0,0,0)',
+            cabA: '#1B1D22', cabB: '#2A2D34', cabBorde: '#A3E635', pieA: '#2A2D34', pieB: '#1B1D22', pieBorde: '#A3E635',
+            sombraTitulo: 'rgba(0,0,0,0)', logoSombra: 'rgba(163,230,53,0.6)', logoTexto: '#101114', marca: '#A3E635',
+        } },
+    menta: { label: 'Menta', sub: 'Verde agua, fresco y limpio',
+        cab: 'curva', cat: 'pildora', fila: 'tarjeta', chip: 'pildora', marca: false,
+        colores: {
+            fondo: '#F5FBFA', tinta: '#0A2A27', celeste: '#14B8A6', celesteClaro: '#5EEAD4',
+            celesteSuave: '#BFEDE6', celesteFondo: '#E8F7F4', azul: '#0F766E', acento: '#0F766E',
+            chipTexto: '#042F2C', catTexto: '#042F2C', catSombra: 'rgba(0,0,0,0)',
+            cabA: '#0F766E', cabB: '#14B8A6', cabBorde: '#5EEAD4', pieA: '#14B8A6', pieB: '#0F766E', pieBorde: '#5EEAD4',
+            sombraTitulo: 'rgba(0,0,0,0)', logoSombra: 'rgba(15,118,110,0.35)', logoTexto: '#0F766E', marca: '#14B8A6',
+        } },
+    atardecer: { label: 'Atardecer', sub: 'Naranja y rosa, cálido',
+        cab: 'curva', cat: 'pildora', fila: 'linea', chip: 'pildora', marca: false,
+        colores: {
+            fondo: '#FFF9F5', tinta: '#3B1420', celeste: '#F97316', celesteClaro: '#FB7185',
+            celesteSuave: '#FFD9C7', celesteFondo: '#FFF0E8', azul: '#E11D48', acento: '#C2410C',
+            chipTexto: '#2B0B14', catTexto: '#2B0B14', catSombra: 'rgba(0,0,0,0)',
+            cabA: '#EA580C', cabB: '#DB2777', cabBorde: '#FDBA74', pieA: '#DB2777', pieB: '#EA580C', pieBorde: '#FDBA74',
+            sombraTitulo: 'rgba(80,10,30,0.35)', logoSombra: 'rgba(219,39,119,0.35)', logoTexto: '#C2410C', marca: '#F97316',
+        } },
+    electrico: { label: 'Azul eléctrico', sub: 'Azul intenso, estilo deportivo',
+        cab: 'recta', cat: 'pildora', fila: 'tarjeta', chip: 'pildora', marca: false,
+        colores: {
+            fondo: '#F6F8FF', tinta: '#0B1640', celeste: '#2563EB', celesteClaro: '#60A5FA',
+            celesteSuave: '#C7D7FE', celesteFondo: '#EAF0FF', azul: '#1D4ED8', acento: '#1D4ED8',
+            chipTexto: '#FFFFFF', catTexto: '#FFFFFF', catSombra: 'rgba(0,0,0,0)',
+            cabA: '#1E3A8A', cabB: '#2563EB', cabBorde: '#93C5FD', pieA: '#2563EB', pieB: '#1E3A8A', pieBorde: '#93C5FD',
+            sombraTitulo: 'rgba(0,0,0,0)', logoSombra: 'rgba(37,99,235,0.35)', logoTexto: '#1D4ED8', marca: '#2563EB',
         } },
 };
 const COLOR = { ...BASE_COLORES };
@@ -411,10 +458,14 @@ function logoHtml(logo, tam = 84) {
 }
 
 function itemHtml(it, sc, ctx) {
+    if (it.t === 'html') return it.html;   // bloque ya armado (lo usa la pestaña Posiciones)
     if (it.t === 'cat') {
         const tam = ajustar(it.txt, 24 * sc, 440, 0.46);
-        const plana = TEMA.cat === 'plana';
-        const barra = plana
+        const pildora = TEMA.cat === 'pildora';
+        const plana = TEMA.cat === 'plana' || pildora;
+        const barra = pildora
+            ? `height:100%; background:linear-gradient(90deg, ${COLOR.celeste}, ${COLOR.celesteClaro}); border-radius:9999px; display:flex; align-items:center; padding:0 20px; box-sizing:border-box;`
+            : plana
             ? `height:100%; background:linear-gradient(90deg, ${COLOR.celeste}, ${COLOR.celesteClaro}); border-left:7px solid ${COLOR.cabBorde}; border-radius:2px; display:flex; align-items:center; padding:0 14px; box-sizing:border-box;`
             : `height:100%; background:linear-gradient(90deg, ${COLOR.celeste}, ${COLOR.celesteClaro}); transform:skewX(-10deg); border-radius:4px; display:flex; align-items:center; padding:0 18px; box-shadow:3px 3px 0 ${COLOR.catSombra};`;
         const txt = plana ? '' : 'transform:skewX(10deg);';
@@ -437,7 +488,12 @@ function itemHtml(it, sc, ctx) {
     const conSede = !!(it.nota && it.l);   // el local juega en otra cancha
     const altoTotal = px((H.fila + (conSede ? H.sede : 0)) * sc);
     const linea = TEMA.fila === 'linea';
-    const base = `height:${altoTotal}; background:${linea ? 'transparent' : fondo}; ${linea ? `border-bottom:1px solid ${COLOR.celesteSuave};` : 'border-radius:6px;'} padding:0 6px; box-sizing:border-box;`;
+    const tarjeta = TEMA.fila === 'tarjeta';
+    const rChip = TEMA.chip === 'pildora' ? '9999px' : '4px';
+    // Tarjeta: fondo redondeado con borde fino y una barrita de color a la izquierda; el borde transparente de 2px deja aire entre partidos
+    const base = tarjeta
+        ? `height:${altoTotal}; background:${COLOR.celesteFondo}; background-clip:padding-box; border-top:2px solid transparent; border-bottom:2px solid transparent; border-radius:12px; box-shadow:inset 0 0 0 1px ${COLOR.celesteSuave}, inset 4px 0 0 0 ${COLOR.celeste}; padding:0 10px; box-sizing:border-box;`
+        : `height:${altoTotal}; background:${linea ? 'transparent' : fondo}; ${linea ? `border-bottom:1px solid ${COLOR.celesteSuave};` : 'border-radius:6px;'} padding:0 6px; box-sizing:border-box;`;
     const k = Math.min(sc, 1.1);   // las columnas de día y hora crecen menos que el resto
     // Los estados (PEN, A CONF...) se ven con borde punteado en lugar de relleno
     const estiloHora = it.pend
@@ -445,16 +501,16 @@ function itemHtml(it, sc, ctx) {
         : `background:${COLOR.celeste}; color:${COLOR.chipTexto};`;
     const wDia = Math.round(68 * k), wHora = Math.round(48 * k);
     const dia = ctx.hayDia
-        ? `<div style="display:flex; align-items:center; justify-content:center;">${it.dia ? `<span style="display:block; width:100%; box-sizing:border-box; text-align:center; background:${COLOR.chipBg}; border:1.5px solid ${COLOR.celesteSuave}; color:${COLOR.acento}; font-family:${TEXTO}; font-weight:800; font-size:${px(12.5 * k)}; line-height:1; padding:3px 0 2px; border-radius:4px; letter-spacing:0.03em; white-space:nowrap;">${esc(it.dia)}</span>` : ''}</div>`
+        ? `<div style="display:flex; align-items:center; justify-content:center;">${it.dia ? `<span style="display:block; width:100%; box-sizing:border-box; text-align:center; background:${COLOR.chipBg}; border:1.5px solid ${COLOR.celesteSuave}; color:${COLOR.acento}; font-family:${TEXTO}; font-weight:800; font-size:${px(12.5 * k)}; line-height:1; padding:3px 0 2px; border-radius:${rChip}; letter-spacing:0.03em; white-space:nowrap;">${esc(it.dia)}</span>` : ''}</div>`
         : '';
     const hora = ctx.hayHora
-        ? `<div style="display:flex; align-items:center; justify-content:flex-start;">${it.hora ? `<span style="display:block; width:100%; box-sizing:border-box; text-align:center; ${estiloHora} font-family:${TITULAR}; font-size:${px(14 * k)}; line-height:1; padding:3px 0 2px; border-radius:4px; letter-spacing:0.04em;">${esc(it.hora)}</span>` : ''}</div>`
+        ? `<div style="display:flex; align-items:center; justify-content:flex-start;">${it.hora ? `<span style="display:block; width:100%; box-sizing:border-box; text-align:center; ${estiloHora} font-family:${TITULAR}; font-size:${px(14 * k)}; line-height:1; padding:3px 0 2px; border-radius:${rChip}; letter-spacing:0.04em;">${esc(it.hora)}</span>` : ''}</div>`
         : '';
     if (it.texto) {
         const tam = ajustar(it.texto, 18 * sc, 440, 0.44);
         return `<div style="${base} display:flex; align-items:center; justify-content:center; gap:10px;">
             ${it.dia ? `<span style="color:${COLOR.acento}; font-family:${TEXTO}; font-weight:800; font-size:${px(13 * k)}; line-height:1; white-space:nowrap;">${esc(it.dia)}</span>` : ''}
-            ${it.hora ? `<span style="${estiloHora} font-family:${TITULAR}; font-size:${px(14 * k)}; line-height:1; padding:3px 6px 2px; border-radius:4px;">${esc(it.hora)}</span>` : ''}
+            ${it.hora ? `<span style="${estiloHora} font-family:${TITULAR}; font-size:${px(14 * k)}; line-height:1; padding:3px 6px 2px; border-radius:${rChip};">${esc(it.hora)}</span>` : ''}
             <span style="font-family:${TEXTO}; font-weight:800; font-size:${px(tam)}; line-height:1; color:${COLOR.tinta}; text-transform:uppercase; letter-spacing:0.02em; white-space:nowrap;">${esc(it.texto)}</span></div>`;
     }
     const columnas = 3 + (ctx.hayDia ? 1 : 0) + (ctx.hayHora ? 1 : 0);
@@ -480,7 +536,7 @@ function itemHtml(it, sc, ctx) {
         </div>`
         : '';
     return `<div style="${base}">
-        <div style="height:${alto}; display:grid; grid-template-columns:${cols}; align-items:center; column-gap:6px;">
+        <div style="height:${alto}; ${tarjeta ? 'margin-top:-2px; ' : ''}display:grid; grid-template-columns:${cols}; align-items:center; column-gap:6px;">
             ${dia}${hora}
             ${nombre(it.l, 'right')}
             <div style="display:flex; justify-content:center;"><span style="font-family:${TITULAR}; font-size:${px(12 * sc)}; line-height:1; color:${COLOR.acento}; background:${COLOR.chipBg}; border:1.5px solid ${COLOR.celesteSuave}; border-radius:9999px; padding:3px 6px 2px; letter-spacing:0.05em;">VS</span></div>
@@ -494,7 +550,10 @@ function htmlFlyer(pag, i, total, c) {
     const f = c.f;
     const tamLogo = Math.max(50, Math.min(124, Number(c.logoTam) || 84));   // diámetro del logo (px de diseño)
     const topLogo = f.seguroSup + Math.max(4, Math.round(60 - tamLogo / 2));
-    const recta = TEMA.cab === 'recta';
+    const curva = TEMA.cab === 'curva';
+    const recta = TEMA.cab === 'recta' || curva;
+    const radCab = curva ? 'border-radius:0 0 30px 30px;' : '';
+    const radPie = curva ? 'border-radius:30px 30px 0 0;' : '';
     const cabAtras  = recta ? 'none' : 'polygon(0 0, 100% 0, 100% calc(100% - 4px), 0 100%)';
     const cabFrente = recta ? 'none' : 'polygon(0 0, 100% 0, 100% calc(100% - 18px), 0 100%)';
     const pieAtras  = recta ? 'none' : 'polygon(0 12px, 100% 2px, 100% 100%, 0 100%)';
@@ -531,8 +590,8 @@ function htmlFlyer(pag, i, total, c) {
         <div style="position:absolute; left:0; right:0; top:${cuerpoTop + cuerpoAlto / 2 - 2}px; height:5px; background:${COLOR.marca}; opacity:${TEMA.marca ? 0.07 : 0};"></div>
 
         <!-- Cabecera -->
-        <div style="position:absolute; left:0; top:0; width:100%; height:${CAB_H + f.seguroSup + 10}px; background:${COLOR.cabBorde}; clip-path:${cabAtras};"></div>
-        <div style="position:absolute; left:0; top:0; width:100%; height:${CAB_H + f.seguroSup}px; background:linear-gradient(110deg, ${COLOR.cabA} 0%, ${COLOR.cabB} 100%); clip-path:${cabFrente};"></div>
+        <div style="position:absolute; left:0; top:0; width:100%; height:${CAB_H + f.seguroSup + 10}px; background:${COLOR.cabBorde}; ${radCab} clip-path:${cabAtras};"></div>
+        <div style="position:absolute; left:0; top:0; width:100%; height:${CAB_H + f.seguroSup}px; background:linear-gradient(110deg, ${COLOR.cabA} 0%, ${COLOR.cabB} 100%); ${radCab} clip-path:${cabFrente};"></div>
         <div style="position:absolute; left:${MARGEN}px; top:${topLogo}px;">${logoHtml(c.logo, tamLogo)}</div>
         <div style="position:absolute; left:${MARGEN + tamLogo + 14}px; top:${f.seguroSup + 18}px; width:${anchoTitulo}px; height:84px; display:flex; flex-direction:column; justify-content:center;">
             <div style="font-family:${TITULAR}; font-size:${px(tamTitulo)}; line-height:0.98; color:${COLOR.cabTexto}; letter-spacing:0.03em; text-shadow:2px 2px 0 ${COLOR.sombraTitulo}; text-transform:uppercase;">${tituloHtml}</div>
@@ -543,8 +602,8 @@ function htmlFlyer(pag, i, total, c) {
         <div style="position:absolute; left:${MARGEN}px; right:${MARGEN}px; top:${cuerpoTop}px;">${items}</div>
 
         <!-- Barra inferior -->
-        <div style="position:absolute; left:0; bottom:0; width:100%; height:${PIE_H + f.seguroInf + 10}px; background:${COLOR.pieBorde}; clip-path:${pieAtras};"></div>
-        <div style="position:absolute; left:0; bottom:0; width:100%; height:${PIE_H + f.seguroInf}px; background:linear-gradient(110deg, ${COLOR.pieA} 0%, ${COLOR.pieB} 100%); clip-path:${pieFrente};"></div>
+        <div style="position:absolute; left:0; bottom:0; width:100%; height:${PIE_H + f.seguroInf + 10}px; background:${COLOR.pieBorde}; ${radPie} clip-path:${pieAtras};"></div>
+        <div style="position:absolute; left:0; bottom:0; width:100%; height:${PIE_H + f.seguroInf}px; background:linear-gradient(110deg, ${COLOR.pieA} 0%, ${COLOR.pieB} 100%); ${radPie} clip-path:${pieFrente};"></div>
         <div style="position:absolute; left:${MARGEN}px; right:${MARGEN}px; bottom:${f.seguroInf}px; height:${PIE_H}px; display:flex; align-items:center; justify-content:space-between; padding-top:8px; box-sizing:border-box;">
             <span style="font-family:${TEXTO}; font-weight:800; font-size:15px; letter-spacing:0.1em; color:${COLOR.cabTexto}; text-transform:uppercase; white-space:nowrap;">${esc(pie)}</span>
             <span style="font-family:${TITULAR}; font-size:20px; letter-spacing:0.06em; color:${COLOR.cabTexto};">${contador}</span>
@@ -813,7 +872,8 @@ const ESTADO_INICIAL = {
     formato: 'vertical',
     diseno: 'clasico',
     logoTam: 84,
-    texto: TEXTO_EJEMPLO,
+    texto: TEXTO_EJEMPLO,       // programación de la pestaña Flyers
+    textoArb: TEXTO_EJEMPLO,    // programación de la pestaña Árbitros (independiente de la de flyers)
     titulo: 'PROGRAMACIÓN\nTENTATIVA',
     fecha: '',
     pie: 'A.F.O.CH',
@@ -829,8 +889,12 @@ const ESTADO_INICIAL = {
     nomina: '',
     arbitros: {},   // { clave del partido: { cancha, ap, a1, a2 } }
     // Programación guardada en la nube que se está editando (vacío = todavía no se guardó)
-    progId: '',
+    progId: '',        // Flyers: registro guardado que se está editando
     progNombre: '',
+    progIdArb: '',     // Árbitros: registro guardado que se está editando (se guarda aparte de los flyers)
+    progNombreArb: '',
+    // Pestaña de posiciones: puntos actuales (base) + resultados de cada fecha, que se suman
+    tabla: { base: '', cats: '1ra, primera', res: {}, titulo: 'TABLA DE\nPOSICIONES', fechas: [{ etiqueta: 'Fecha 1', texto: '' }] },
     subirFlyers: true,   // al guardar una programación, subir también los PNG a ImageKit
 };
 let estado = cargarEstado();
@@ -850,9 +914,15 @@ function cargarEstado() {
             if (!FORMATOS[e.formato]) e.formato = ESTADO_INICIAL.formato;
             if (!DISENOS[e.diseno]) e.diseno = ESTADO_INICIAL.diseno;
             e.logoTam = Math.max(50, Math.min(124, Number(e.logoTam) || 84));
-            if (e.pestana !== 'arbitros') e.pestana = 'flyers';
+            if (e.pestana !== 'arbitros' && e.pestana !== 'tabla') e.pestana = 'flyers';
+            const tb = e.tabla;
+            e.tabla = (tb && typeof tb === 'object' && Array.isArray(tb.fechas))
+                ? { base: String(tb.base || ''), cats: String(tb.cats == null ? '1ra, primera' : tb.cats), res: (tb.res && typeof tb.res === 'object' && !Array.isArray(tb.res)) ? tb.res : {}, titulo: String(tb.titulo || ''), fechas: tb.fechas.map(x => ({ etiqueta: String((x && x.etiqueta) || ''), texto: String((x && x.texto) || '') })) }
+                : JSON.parse(JSON.stringify(ESTADO_INICIAL.tabla));
             if (e.disenoArb !== 'excel' && !DISENOS[e.disenoArb]) e.disenoArb = 'excel';
             if (!e.arbitros || typeof e.arbitros !== 'object' || Array.isArray(e.arbitros)) e.arbitros = {};
+            // Antes había un solo texto compartido: si todavía no hay uno propio para árbitros, arranca con una copia
+            e.textoArb = typeof g.textoArb === 'string' ? g.textoArb : String(e.texto || '');
             e.anio = Number(e.anio) || new Date().getFullYear();
             e.usarEscudos = e.usarEscudos !== false;
             e.subirFlyers = e.subirFlyers !== false;
@@ -1165,6 +1235,7 @@ function sincronizarFormato() {
 }
 function llenarInputs() {
     $('in-texto').value = estado.texto;
+    $('in-texto-arb').value = estado.textoArb;
     $('in-titulo').value = estado.titulo;
     $('in-fecha').value = estado.fecha;
     $('in-pie').value = estado.pie;
@@ -1223,10 +1294,10 @@ function imagenADataURL(archivo, max = 200) {
 // Nombres de equipos que aparecen en la programación (sin repetir)
 function equiposDeProgramacion() {
     const vistos = new Map();
-    parsearProgramacion(estado.texto).forEach(b => b.filas.forEach(f => {
+    [estado.texto, estado.textoArb].forEach(t => parsearProgramacion(t).forEach(b => b.filas.forEach(f => {
         if (!f.l) return;
         [f.l, f.v].forEach(n => { const k = sinAcentos(n).replace(/\s+/g, ' ').trim(); if (!vistos.has(k)) vistos.set(k, n); });
-    }));
+    })));
     return [...vistos.values()];
 }
 
@@ -1451,6 +1522,7 @@ const hayHora = (h) => /^\d{1,2}:\d{2}$/.test(h);
 
 function renderActivo(lista = true) {
     if (estado.pestana === 'historial') return Promise.resolve();   // el historial no dibuja flyers
+    if (estado.pestana === 'tabla') return window.tablaLiga ? window.tablaLiga.render() : Promise.resolve();
     return estado.pestana === 'arbitros' ? renderArb(lista) : render();
 }
 function renderDiferido(lista = true) {
@@ -1460,13 +1532,18 @@ function renderDiferido(lista = true) {
 }
 
 function aplicarPestana(p) {
-    const arb = p === 'arbitros', hist = p === 'historial';
+    const arb = p === 'arbitros', hist = p === 'historial', tab = p === 'tabla';
     if (visorIdx >= 0) cerrarVisor();
-    $('vista-flyers').classList.toggle('hidden', arb || hist);
+    $('vista-flyers').classList.toggle('hidden', arb || hist || tab);
+    $('vista-tabla').classList.toggle('hidden', !tab);
     $('vista-arbitros').classList.toggle('hidden', !arb);
     $('vista-historial').classList.toggle('hidden', !hist);
-    // La programación es una sola: el mismo cuadro de texto se mueve de una pestaña a la otra
-    if (!hist) $(arb ? 'slot-prog-arb' : 'slot-prog-flyers').appendChild($('sec-programacion'));
+    // La tarjeta (guardar/borrar) se mueve de una pestaña a la otra, pero cada pestaña tiene su propio texto
+    if (!hist && !tab) $(arb ? 'slot-prog-arb' : 'slot-prog-flyers').appendChild($('sec-programacion'));
+    // Cada pestaña tiene su propio cuadro de texto dentro de la misma tarjeta
+    $('wrap-texto-flyers').classList.toggle('hidden', arb);
+    $('wrap-texto-arb').classList.toggle('hidden', !arb);
+    if (!hist && !tab) sincronizarBotonesProg();
     document.querySelectorAll('[data-pestana]').forEach(b => {
         const on = b.dataset.pestana === p;
         b.classList.toggle('tab-activa', on);
@@ -1533,7 +1610,7 @@ function marcarConflictos() {
 }
 
 async function renderArb(lista = true) {
-    partidosArb = armarPartidos(parsearProgramacion(estado.texto), opcionesArb());
+    partidosArb = armarPartidos(parsearProgramacion(estado.textoArb), opcionesArb());
     const dias = agruparDias(partidosArb, estado.arbitros);
     const paginas = repartirPlanilla(dias, A.cap);
     const total = paginas.length;
@@ -1738,14 +1815,31 @@ async function sincronizarEquiposNube() {
 }
 
 // ---------- Programaciones guardadas ----------
-function sincronizarBotonesProg() {
-    const abierta = !!estado.progId;
-    $('btn-prog-guardar').textContent = abierta ? 'Actualizar' : 'Guardar';
-    $('btn-prog-nueva').classList.toggle('hidden', !abierta);
-    $('prog-estado').textContent = abierta ? `Guardada: ${estado.progNombre || 'sin nombre'}` : 'Todavía no está guardada en la nube';
+// Cada guardado es de UNA pestaña: tipo 'flyers' (flyers de partidos) o 'arbitros' (planilla de árbitros).
+// Los registros viejos, sin tipo, tenían todo junto y se siguen pudiendo abrir.
+const tipoActual = () => estado.pestana === 'arbitros' ? 'arbitros' : 'flyers';
+const idProg = (t) => t === 'arbitros' ? estado.progIdArb : estado.progId;
+const nombreProg = (t) => t === 'arbitros' ? estado.progNombreArb : estado.progNombre;
+function fijarProg(t, id, nombre) {
+    if (t === 'arbitros') { estado.progIdArb = id; estado.progNombreArb = nombre; }
+    else { estado.progId = id; estado.progNombre = nombre; }
 }
 
-function nombreSugerido() {
+function sincronizarBotonesProg() {
+    const t = tipoActual();
+    const abierta = !!idProg(t);
+    $('btn-prog-guardar').textContent = abierta ? 'Actualizar' : 'Guardar';
+    $('btn-prog-nueva').classList.toggle('hidden', !abierta);
+    const donde = t === 'arbitros' ? 'planilla de árbitros' : 'flyers';
+    $('prog-estado').textContent = abierta ? `Guardada (${donde}): ${nombreProg(t) || 'sin nombre'}` : `Todavía no está guardada en la nube (${donde})`;
+}
+
+function nombreSugerido(t) {
+    if (t === 'arbitros') {
+        const ba = parsearProgramacion(estado.textoArb)[0];
+        const baseA = ba ? [ba.cat, ba.zona].filter(Boolean).join(' - ') : '';
+        return (baseA || 'Árbitros').slice(0, 60);
+    }
     const f = String(estado.fecha || '').trim();
     if (f) return f;
     const b = parsearProgramacion(estado.texto)[0];
@@ -1753,9 +1847,23 @@ function nombreSugerido() {
     return (base || 'Programación').slice(0, 60);
 }
 
-// Todo lo necesario para volver a armar los mismos flyers y la misma planilla de árbitros
-function datosProgramacion() {
+// Lo necesario para volver a armar lo de UNA pestaña (los flyers, o la planilla de árbitros)
+function datosProgramacion(t) {
+    if (t === 'arbitros') {
+        return {
+            tipo: 'arbitros',
+            texto: String(estado.textoArb || ''),
+            nPartidos: parsearProgramacion(estado.textoArb).reduce((a, b) => a + b.filas.length, 0),
+            anio: estado.anio,
+            diaDefault: String(estado.diaDefault || ''),
+            ordenar: !!estado.ordenar,
+            disenoArb: estado.disenoArb,
+            nomina: String(estado.nomina || ''),
+            arbitrosJson: JSON.stringify(estado.arbitros || {}),   // en texto: las claves de los partidos tienen puntos y barras
+        };
+    }
     return {
+        tipo: 'flyers',
         texto: String(estado.texto || ''),
         titulo: String(estado.titulo || ''),
         fecha: String(estado.fecha || ''),
@@ -1764,61 +1872,59 @@ function datosProgramacion() {
         formato: estado.formato,
         logoTam: estado.logoTam,
         nPartidos: parsearProgramacion(estado.texto).reduce((a, b) => a + b.filas.length, 0),
-        anio: estado.anio,
-        diaDefault: String(estado.diaDefault || ''),
-        ordenar: !!estado.ordenar,
-        disenoArb: estado.disenoArb,
-        nomina: String(estado.nomina || ''),
-        arbitrosJson: JSON.stringify(estado.arbitros || {}),   // en texto: las claves de los partidos tienen puntos y barras
     };
 }
 
 async function guardarProgramacion(comoNueva) {
     const fb = nube();
     if (!fb) { mostrarToast('Todavía no hay conexión con Firebase. Probá recargar la página.', 'error'); return; }
-    if (!String(estado.texto || '').trim()) { mostrarToast('Pegá una programación antes de guardar.', 'error'); return; }
-    const actualiza = !!estado.progId && !comoNueva;
-    const sugerido = (actualiza && estado.progNombre) || nombreSugerido();
-    const nombre = prompt(actualiza ? 'Nombre (se actualiza la programación guardada):' : 'Nombre de la programación:', sugerido);
+    const t = tipoActual();
+    const textoTab = t === 'arbitros' ? estado.textoArb : estado.texto;
+    if (!String(textoTab || '').trim()) { mostrarToast('Pegá una programación antes de guardar.', 'error'); return; }
+    const actualiza = !!idProg(t) && !comoNueva;
+    const sugerido = (actualiza && nombreProg(t)) || nombreSugerido(t);
+    const nombre = prompt(actualiza ? 'Nombre (se actualiza lo guardado):' : (t === 'arbitros' ? 'Nombre de la planilla de árbitros:' : 'Nombre de los flyers:'), sugerido);
     if (nombre === null) return;
 
     const botones = [$('btn-prog-guardar'), $('btn-prog-nueva')];
     botones.forEach(b => { b.disabled = true; });
     estadoNube('Nube: guardando…', 'espera');
     try {
-        const datos = { ...datosProgramacion(), nombre: nombre.trim() || sugerido };
+        const datos = { ...datosProgramacion(t), nombre: nombre.trim() || sugerido };
+        let id = idProg(t);
         if (actualiza) {
-            try { await fb.programaciones.actualizar(estado.progId, datos); }
+            try { await fb.programaciones.actualizar(id, datos); }
             catch (err) {
                 // si la borraron desde otro lado, se vuelve a crear
-                if (String((err && err.code) || '').includes('not-found')) estado.progId = await fb.programaciones.crear(datos);
+                if (String((err && err.code) || '').includes('not-found')) id = await fb.programaciones.crear(datos);
                 else throw err;
             }
         } else {
-            estado.progId = await fb.programaciones.crear(datos);
+            id = await fb.programaciones.crear(datos);
         }
-        estado.progNombre = datos.nombre;
+        fijarProg(t, id, datos.nombre);
         guardarEstado(); sincronizarBotonesProg();
 
-        // Imágenes de la pestaña en la que estás (flyers o planilla de árbitros). La programación ya quedó guardada.
+        // Imágenes de la pestaña en la que estás (flyers o planilla de árbitros). Lo guardado ya quedó guardado.
         let extra = '';
         if (estado.subirFlyers && ikListo()) {
             try {
-                const n = await subirImagenesProgramacion(estado.progId);
+                const n = await subirImagenesProgramacion(id);
                 extra = n ? ` Se subieron ${n} ${n === 1 ? 'imagen' : 'imágenes'}.` : '';
             } catch (err2) {
                 console.error('No se pudieron subir las imágenes:', err2);
                 estadoNube('Nube: error con las imágenes', 'error');
-                mostrarToast(`La programación se guardó, pero las imágenes no: ${mensajeErrorIk(err2)}`, 'error');
+                mostrarToast(`Se guardó, pero las imágenes no: ${mensajeErrorIk(err2)}`, 'error');
                 return;
             }
         } else if (estado.subirFlyers) {
             extra = ' (Sin claves de ImageKit: no se subieron las imágenes.)';
         }
         estadoNube('Nube: conectada', 'ok');
-        mostrarToast((actualiza ? 'Programación actualizada.' : 'Programación guardada.') + extra);
+        const que = t === 'arbitros' ? 'Planilla de árbitros' : 'Flyers';
+        mostrarToast((actualiza ? `${que} actualizados.` : `${que} guardados.`).replace('Planilla de árbitros actualizados', 'Planilla de árbitros actualizada').replace('Planilla de árbitros guardados', 'Planilla de árbitros guardada') + extra);
     } catch (err) {
-        console.error('No se pudo guardar la programación:', err);
+        console.error('No se pudo guardar:', err);
         estadoNube('Nube: error al guardar', 'error');
         mostrarToast(mensajeErrorNube(err), 'error');
     } finally {
@@ -1852,17 +1958,15 @@ function imagenesHtml(p) {
     return `<div class="flex flex-wrap gap-2 mt-2">${lista.map(x => `<a href="${esc(x.url)}" target="_blank" rel="noopener" title="${esc(x.nombre || '')}"><img class="hist-mini" src="${esc(miniatura(x.url, 200))}" alt="" loading="lazy"></a>`).join('')}</div>`;
 }
 
-function pintarHistorial() {
-    const cont = $('lista-historial');
-    if (!historial.length) {
-        cont.innerHTML = '<p class="campo-ayuda">Todavía no hay programaciones guardadas. Armá una y tocá \"Guardar\".</p>';
-        return;
-    }
-    cont.innerHTML = historial.map(p => {
-        const abierta = estado.progId === p.id;
-        const editada = p.actualizada && p.creada && p.actualizada - p.creada > 60000 ? `editada ${fechaCorta(p.actualizada)}` : '';
-        const detalle = [`Guardada ${fechaCorta(p.creada)}`, editada, `${p.nPartidos || 0} partidos`, (DISENOS[p.diseno] || {}).label, (FORMATOS[p.formato] || {}).label].filter(Boolean).join(' · ');
-        return `<div class="hist-card ${abierta ? 'hist-abierta' : ''}" data-hid="${esc(p.id)}">
+function tarjetaHistorial(p) {
+    const tipo = p.tipo === 'arbitros' ? 'arbitros' : (p.tipo === 'flyers' ? 'flyers' : 'mixto');
+    const abierta = (tipo === 'arbitros' ? estado.progIdArb : estado.progId) === p.id && tipo !== 'mixto';
+    const editada = p.actualizada && p.creada && p.actualizada - p.creada > 60000 ? `editada ${fechaCorta(p.actualizada)}` : '';
+    const estilo = tipo === 'arbitros'
+        ? (p.disenoArb === 'excel' ? 'Excel' : (DISENOS[p.disenoArb] || {}).label)
+        : [(DISENOS[p.diseno] || {}).label, (FORMATOS[p.formato] || {}).label].filter(Boolean).join(' · ');
+    const detalle = [`Guardada ${fechaCorta(p.creada)}`, editada, `${p.nPartidos || 0} partidos`, estilo].filter(Boolean).join(' · ');
+    return `<div class="hist-card ${abierta ? 'hist-abierta' : ''}" data-hid="${esc(p.id)}">
             <div class="min-w-0 flex-1">
                 <p class="hist-nombre">${esc(p.nombre || 'Sin nombre')}${abierta ? ' <span style="color:#0673C8;">· abierta</span>' : ''}</p>
                 <p class="hist-detalle">${esc(detalle)}</p>
@@ -1874,7 +1978,24 @@ function pintarHistorial() {
                 <button type="button" class="btn-sec" data-hist-borrar>Borrar</button>
             </div>
         </div>`;
-    }).join('');
+}
+
+function pintarHistorial() {
+    const cont = $('lista-historial');
+    if (!historial.length) {
+        cont.innerHTML = '<p class="campo-ayuda">Todavía no hay nada guardado. Armá algo y tocá "Guardar".</p>';
+        return;
+    }
+    // Los flyers y las planillas de árbitros se guardan por separado, cada uno en su sección
+    const grupos = [
+        ['Flyers de partidos', historial.filter(p => p.tipo === 'flyers'), 'Todavía no guardaste flyers.'],
+        ['Planillas de árbitros', historial.filter(p => p.tipo === 'arbitros'), 'Todavía no guardaste ninguna planilla de árbitros.'],
+    ];
+    const viejos = historial.filter(p => p.tipo !== 'flyers' && p.tipo !== 'arbitros');
+    if (viejos.length) grupos.push(['Guardados anteriores (flyers + árbitros juntos)', viejos, '']);
+    cont.innerHTML = grupos.map(([titulo, lista, vacio]) => `
+        <h3 class="text-xs font-extrabold text-slate-700 mt-3 first:mt-0">${esc(titulo)} <span class="text-slate-400">(${lista.length})</span></h3>
+        ${lista.length ? lista.map(tarjetaHistorial).join('') : `<p class="campo-ayuda !mt-0">${esc(vacio)}</p>`}`).join('');
 }
 
 function llenarInputsArb() {
@@ -1887,33 +2008,44 @@ function llenarInputsArb() {
 function abrirProgramacion(id) {
     const p = historial.find(x => x.id === id);
     if (!p) return;
-    if (String(estado.texto || '').trim() && estado.texto !== p.texto && !confirm('Se va a reemplazar la programación que tenés en pantalla. ¿Seguir?')) return;
-    let arbitros = {};
-    try { const a = JSON.parse(p.arbitrosJson || '{}'); if (a && typeof a === 'object' && !Array.isArray(a)) arbitros = a; } catch (err) { /* queda vacío */ }
+    const tipo = p.tipo === 'arbitros' ? 'arbitros' : (p.tipo === 'flyers' ? 'flyers' : 'mixto');
+    const textoP = String(p.texto || '');
+    const pisaFlyers = tipo !== 'arbitros' && String(estado.texto || '').trim() && estado.texto !== textoP;
+    const pisaArb = tipo !== 'flyers' && String(estado.textoArb || '').trim() && estado.textoArb !== textoP;
+    if ((pisaFlyers || pisaArb) && !confirm(`Se va a reemplazar ${tipo === 'arbitros' ? 'la planilla de árbitros' : (tipo === 'flyers' ? 'la programación de flyers' : 'lo que tenés en pantalla')}. ¿Seguir?`)) return;
 
-    estado.texto = String(p.texto || '');
-    estado.titulo = String(p.titulo || '');
-    estado.fecha = String(p.fecha || '');
-    estado.pie = String(p.pie || '');
-    if (DISENOS[p.diseno]) estado.diseno = p.diseno;
-    if (FORMATOS[p.formato]) estado.formato = p.formato;
-    estado.logoTam = Math.max(50, Math.min(124, Number(p.logoTam) || 84));
-    estado.anio = Number(p.anio) || new Date().getFullYear();
-    estado.diaDefault = String(p.diaDefault || '');
-    estado.ordenar = p.ordenar !== false;
-    if (p.disenoArb === 'excel' || DISENOS[p.disenoArb]) estado.disenoArb = p.disenoArb;
-    estado.nomina = String(p.nomina || '');
-    estado.arbitros = arbitros;
-    estado.progId = p.id;
-    estado.progNombre = String(p.nombre || '');
-    estado.pestana = 'flyers';
+    if (tipo !== 'arbitros') {
+        estado.texto = textoP;
+        estado.titulo = String(p.titulo || '');
+        estado.fecha = String(p.fecha || '');
+        estado.pie = String(p.pie || '');
+        if (DISENOS[p.diseno]) estado.diseno = p.diseno;
+        if (FORMATOS[p.formato]) estado.formato = p.formato;
+        estado.logoTam = Math.max(50, Math.min(124, Number(p.logoTam) || 84));
+    }
+    if (tipo !== 'flyers') {
+        let arbitros = {};
+        try { const a = JSON.parse(p.arbitrosJson || '{}'); if (a && typeof a === 'object' && !Array.isArray(a)) arbitros = a; } catch (err) { /* queda vacío */ }
+        estado.textoArb = textoP;
+        estado.anio = Number(p.anio) || new Date().getFullYear();
+        estado.diaDefault = String(p.diaDefault || '');
+        estado.ordenar = p.ordenar !== false;
+        if (p.disenoArb === 'excel' || DISENOS[p.disenoArb]) estado.disenoArb = p.disenoArb;
+        estado.nomina = String(p.nomina || '');
+        estado.arbitros = arbitros;
+    }
+    // Un guardado viejo (todo junto) se abre como copia: al guardar se crean registros nuevos y el viejo queda como estaba
+    if (tipo === 'flyers') fijarProg('flyers', p.id, String(p.nombre || ''));
+    else if (tipo === 'arbitros') fijarProg('arbitros', p.id, String(p.nombre || ''));
+    else { fijarProg('flyers', '', ''); fijarProg('arbitros', '', ''); }
+    estado.pestana = tipo === 'arbitros' ? 'arbitros' : 'flyers';
 
     guardarEstado();
     llenarInputs(); llenarInputsArb();
     sincronizarDiseno(); sincronizarFormato(); sincronizarEstiloArb(); sincronizarBotonesProg();
-    aplicarPestana('flyers');
+    aplicarPestana(estado.pestana);
     renderActivo(true);
-    mostrarToast(`Abierta: ${p.nombre || 'programación'}`);
+    mostrarToast(`Abierta: ${p.nombre || 'programación'}${tipo === 'mixto' ? ' (se carga en las dos pestañas; al guardar se crean registros nuevos)' : ''}`);
 }
 
 async function borrarProgramacion(id) {
@@ -1922,7 +2054,9 @@ async function borrarProgramacion(id) {
     try {
         await nube().programaciones.borrar(id);
         historial = historial.filter(x => x.id !== id);
-        if (estado.progId === id) { estado.progId = ''; estado.progNombre = ''; guardarEstado(); sincronizarBotonesProg(); }
+        if (estado.progId === id) fijarProg('flyers', '', '');
+        if (estado.progIdArb === id) fijarProg('arbitros', '', '');
+        guardarEstado(); sincronizarBotonesProg();
         pintarHistorial();
         mostrarToast('Programación borrada.');
     } catch (err) {
@@ -2092,6 +2226,7 @@ async function iniciar() {
         guardarEstado(); sincronizarDiseno(); render();
     });
     $('in-texto').addEventListener('input', (e) => { estado.texto = e.target.value; guardarEstado(); renderDiferido(); });
+    $('in-texto-arb').addEventListener('input', (e) => { estado.textoArb = e.target.value; guardarEstado(); renderDiferido(); });
     $('in-titulo').addEventListener('input', (e) => { estado.titulo = e.target.value; guardarEstado(); renderDiferido(); });
     $('in-fecha').addEventListener('input', (e) => { estado.fecha = e.target.value; guardarEstado(); renderDiferido(); });
     $('in-pie').addEventListener('input', (e) => { estado.pie = e.target.value; guardarEstado(); renderDiferido(); });
@@ -2110,8 +2245,8 @@ async function iniciar() {
     $('in-logo').addEventListener('change', (e) => { leerLogo(e.target.files[0]); e.target.value = ''; });
     $('btn-logo-quitar').addEventListener('click', () => { estado.logoSubido = ''; guardarEstado(); llenarInputs(); render(); });
     // Ejemplo y Borrar empiezan de cero: ya no se está editando una programación guardada
-    $('btn-ejemplo').addEventListener('click', () => { estado.texto = TEXTO_EJEMPLO; estado.progId = ''; estado.progNombre = ''; guardarEstado(); llenarInputs(); sincronizarBotonesProg(); render(); });
-    $('btn-limpiar').addEventListener('click', () => { estado.texto = ''; estado.progId = ''; estado.progNombre = ''; guardarEstado(); llenarInputs(); sincronizarBotonesProg(); render(); });
+    $('btn-ejemplo').addEventListener('click', () => { if (estado.pestana === 'arbitros') estado.textoArb = TEXTO_EJEMPLO; else estado.texto = TEXTO_EJEMPLO; fijarProg(tipoActual(), '', ''); guardarEstado(); llenarInputs(); sincronizarBotonesProg(); renderActivo(true); });
+    $('btn-limpiar').addEventListener('click', () => { if (estado.pestana === 'arbitros') estado.textoArb = ''; else estado.texto = ''; fijarProg(tipoActual(), '', ''); guardarEstado(); llenarInputs(); sincronizarBotonesProg(); renderActivo(true); });
     $('previews').addEventListener('click', (e) => {
         const v = e.target.closest('[data-ver]');
         if (v) { abrirVisor(Number(v.dataset.ver)); return; }
@@ -2128,6 +2263,21 @@ async function iniciar() {
     iniciarBuscadorEscudos();
     iniciarNubeUI();
     iniciarImageKitUI();
+    if (window.tablaLiga) window.tablaLiga.iniciar({
+        estado, $, guardarEstado, esc, crearBuscador, parsearProgramacion, htmlFlyer, aplicarDiseno, alturaUtil, H, TEXTO, TITULAR, FORMATOS, DISENOS,
+        precargarEscudos, renderDiferido, abrirVisor, descargar,
+        color: () => COLOR, tema: () => TEMA, logo: logoActual, toast: mostrarToast,
+        slug: (t) => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tabla',
+        escudoDe: () => { const b = crearBuscador(estado.equipos); return (n) => { const e = b(n); const u = (e && e.escudo) || ''; return cacheEscudos.get(u) || u; }; },
+        nombresActuales: () => flyersActuales.map((_, i) => i),
+        publicar: (htmls, nombres, f) => {   // deja listos los PNG a tamaño real y la vista ampliada
+            htmlsActuales = htmls;
+            vista = { ancho: f.ancho, alto: f.alto, ratio: ANCHO_SALIDA / f.ancho, fondo: COLOR.fondo };
+            $('export').innerHTML = htmls.map(h => `<div style="width:${f.ancho}px; height:${f.alto}px;">${h}</div>`).join('');
+            flyersActuales = nombres.map((nombre, i) => ({ nombre, nodo: $('export').querySelector(`[data-flyer="${i}"]`) }));
+            if (visorIdx >= 0) pintarVisor();
+        },
+    });
 
     $('visor-cerrar').addEventListener('click', cerrarVisor);
     $('visor').addEventListener('click', (e) => { if (e.target === $('visor')) cerrarVisor(); });
