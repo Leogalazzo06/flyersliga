@@ -834,10 +834,129 @@ function htmlPlanilla(pag, i, total, c) {
     return `<div data-flyer="${i}" style="position:relative; width:${A.ancho}px; height:${c.alto}px; background:${p.fondo}; overflow:hidden; font-family:${TEXTO};">${items}${contador}</div>`;
 }
 
+// ------------------------------------------------------------
+// ORDENADOR: texto corrido (sin viñetas, sin días ni horarios) -> formato de programación
+//   Primera y Sub-20 Zona Sur – Fecha 10 Dep. Argentino Vs. Sp. Español ...
+//   pasa a:
+//   Primera y Sub-20
+//   Zona Sur – Fecha 10
+//   • Dep. Argentino Vs. Sp. Español
+// Lo difícil es saber dónde termina un equipo y empieza el siguiente ("Avenida FC Atl. Alvear"),
+// así que se apoya en los equipos conocidos (lista de la app + los que se ven en el propio texto)
+// y en pistas de forma: las abreviaturas ("Atl.", "M.") empiezan un equipo y "FC"/"SB"/"VB" lo cierran.
+// Devuelve { texto, avisos[] }: avisos son los renglones donde la separación fue una suposición.
+// ------------------------------------------------------------
+const RE_ENCABEZADO = /(zona(?:\s+(?!fecha\b)[^\s–—-]+){1,3}\s*(?:[–—-]\s*)?fecha\s*\d+|veteranos\s*\+\s*\d+\s*(?:[–—-]\s*)?fecha\s*\d+)(\s*[–—-]\s*(?:local|sede)\s*:?)?/gi;
+const RE_CORTE_CATEGORIA = /\s+(?=(?:juveniles|infantiles|veteranos(?!\s*\+)|(?:primera|1ra)\s+y\s+sub-?\d+)\b)/gi;
+const RE_ABREV = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{1,4}\.$/;
+const RE_SIGLA = /^[A-ZÁÉÍÓÚÑ]{2,3}$/;      // FC, SB, VB...
+const RE_CONECTOR = /^(de|del|la|las|los|el|y)$/i;
+const claveNombre = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+// Separa las palabras de un tramo en [izquierda, derecha] (fin de un equipo + comienzo del siguiente)
+function dividirEquipos(palabras, K) {
+    if (palabras.length < 2) return { izq: palabras.join(' '), der: '', seguro: false };
+    let mejor = null, pm = -Infinity, empate = false;
+    for (let k = 1; k < palabras.length; k++) {
+        const L = palabras.slice(0, k), R = palabras.slice(k);
+        let p = 0;
+        if (K.has(claveNombre(L.join(' ')))) p += 2;
+        if (K.has(claveNombre(R.join(' ')))) p += 2;
+        if (RE_ABREV.test(palabras[k])) p += 1;                       // "... | Atl. Alvear"
+        if (RE_SIGLA.test(palabras[k - 1]) && !RE_CONECTOR.test(palabras[k])) p += 1;   // "Avenida FC | ..."
+        if (RE_ABREV.test(palabras[k - 1])) p -= 3;                   // no dejar "M." suelto
+        if (RE_CONECTOR.test(palabras[k]) || RE_CONECTOR.test(palabras[k - 1])) p -= 3;   // "Mártires de | Córdoba"
+        if (RE_SIGLA.test(R[0]) && !K.has(claveNombre(R.join(' ')))) p -= 3;              // un equipo no empieza con "FC"
+        if (p > pm + 1e-9) { mejor = k; pm = p; empate = false; } else if (Math.abs(p - pm) < 1e-9) empate = true;
+    }
+    return { izq: palabras.slice(0, mejor).join(' '), der: palabras.slice(mejor).join(' '), seguro: pm > 0 && !empate };
+}
+
+// "FHFC Fuimos Héroes FC" / "R. Escalada R. Escalada" -> local (sede) + primer equipo
+function separarLocal(palabras, K) {
+    const n = palabras.length;
+    if (n < 2) return { local: '', resto: palabras.join(' '), seguro: false };
+    const corte = (k) => ({ local: palabras.slice(0, k).join(' '), resto: palabras.slice(k).join(' '), seguro: true });
+    if (n % 2 === 0 && claveNombre(palabras.slice(0, n / 2).join(' ')) === claveNombre(palabras.slice(n / 2).join(' '))) return corte(n / 2);   // la sede repite al equipo
+    if (/^[A-ZÁÉÍÓÚÑ]{3,}$/.test(palabras[0]) && !K.has(claveNombre(palabras[0]))) return corte(1);                                      // sigla: FHFC
+    let mejor = 0, pm = 0;
+    for (let k = 1; k < n; k++) {
+        const p = (K.has(claveNombre(palabras.slice(0, k).join(' '))) ? 1 : 0) + (K.has(claveNombre(palabras.slice(k).join(' '))) ? 1 : 0);
+        if (p > pm) { mejor = k; pm = p; }
+    }
+    return pm ? corte(mejor) : { local: '', resto: palabras.join(' '), seguro: false };
+}
+
+function ordenarProgramacion(texto, conocidos = []) {
+    const avisos = [];
+    const K = new Set((conocidos || []).map(claveNombre).filter(Boolean));
+    const lineas = String(texto || '').replace(/\r/g, '').replace(/\t/g, ' ')
+        .split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean)
+        .flatMap(l => l.replace(RE_CORTE_CATEGORIA, '\n').split('\n').map(s => s.trim()).filter(Boolean));
+    const esVs = /\svs\.?\s/i;
+    const partirVs = (s) => s.split(/\s+vs\.?\s+/i).map(x => x.trim());
+
+    // 1) Primera pasada: se aprende de los extremos de cada tramo (son nombres completos y seguros)
+    const piezas = lineas.map(l => {
+        if (!esVs.test(l) || /^[*\-•·▪►>]/.test(l)) return { crudo: l };
+        const hs = [...l.matchAll(RE_ENCABEZADO)];
+        const cabeza = (hs.length ? l.slice(0, hs[0].index) : '').trim();
+        const tramos = hs.length
+            ? hs.map((h, i) => ({ h, cuerpo: l.slice(h.index + h[0].length, i + 1 < hs.length ? hs[i + 1].index : undefined).replace(/^[\s:–—-]+/, '').trim() }))
+            : [{ h: null, cuerpo: l }];
+        tramos.forEach(t => {
+            if (t.h && t.h[2]) return;   // con sede el primer equipo viene pegado a la sede
+            const s = partirVs(t.cuerpo);
+            if (s.length >= 2) { K.add(claveNombre(s[0])); K.add(claveNombre(s[s.length - 1])); }
+        });
+        return { cabeza, tramos };
+    });
+
+    // 2) Segunda pasada: armado del texto
+    const salida = [];
+    piezas.forEach(pz => {
+        if (pz.crudo !== undefined) { salida.push(pz.crudo); return; }
+        const primero = pz.tramos[0].h ? pz.tramos[0].h[1] : '';
+        const cabezaSobra = pz.cabeza && primero && claveNombre(primero).startsWith(claveNombre(pz.cabeza));   // "Veteranos" + "Veteranos +40 ..."
+        if (pz.cabeza && !cabezaSobra) salida.push(pz.cabeza);
+        pz.tramos.forEach(t => {
+            let cuerpo = t.cuerpo, titulo = t.h ? t.h[1].replace(/\s+/g, ' ').trim() : '';
+            if (t.h && t.h[2]) {   // sede: "– Local: FHFC"
+                const sp = partirVs(cuerpo);
+                const r = separarLocal(sp[0].split(' '), K);
+                if (!r.seguro) avisos.push(`${titulo}: no pude separar la sede del primer equipo`);
+                titulo += r.local ? ` – Local: ${r.local}` : '';
+                sp[0] = r.resto;
+                cuerpo = sp.join(' Vs. ');
+                const s0 = partirVs(cuerpo)[0]; if (s0) K.add(claveNombre(s0));
+            }
+            if (titulo) salida.push(titulo);
+            const partidos = [];
+            if (/\d{1,2}\s*[:.]\s*\d{2}\s*hs|\b\d{1,2}\s*hs\b|pendiente|a confirmar/i.test(cuerpo)) {
+                // ya trae días/horarios: cada partido termina en su horario o estado
+                cuerpo.split(/(?<=(?:\d{1,2}\s*[:.]\s*\d{2}\s*hs?\.?|\b\d{1,2}\s*hs\.?|pendiente|a confirmar))\s+(?=\S)/i).forEach(p => p.trim() && partidos.push(p.trim()));
+            } else {
+                const s = partirVs(cuerpo);
+                if (s.length < 2) { if (cuerpo) partidos.push(cuerpo); return; }
+                let izq = s[0];
+                for (let i = 1; i < s.length; i++) {
+                    if (i === s.length - 1) { partidos.push(`${izq} Vs. ${s[i]}`); break; }
+                    const d = dividirEquipos(s[i].split(' '), K);
+                    if (!d.seguro) avisos.push(`${izq} Vs. ${d.izq}  |  ${d.der}`);
+                    partidos.push(`${izq} Vs. ${d.izq}`);
+                    izq = d.der;
+                }
+            }
+            partidos.forEach(p => salida.push(`• ${p}`));
+        });
+    });
+    return { texto: salida.join('\n'), avisos };
+}
+
 // Fuera del navegador (tests en Node) exportamos solo la lógica pura
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { parsearProgramacion, parsearFila, paginarCon, repartir, alturaUtil, FORMATOS, H, htmlFlyer, DISENOS, aplicarDiseno, DENSIDADES, aplicarDensidad,
-        armarPartidos, agruparDias, paginarPlanilla, repartirPlanilla, htmlPlanilla, paletaPlanilla, fechaDe, sedeDeTitulo, A, crearBuscador, tokensEquipo };
+        armarPartidos, agruparDias, paginarPlanilla, repartirPlanilla, htmlPlanilla, paletaPlanilla, fechaDe, sedeDeTitulo, A, crearBuscador, tokensEquipo, ordenarProgramacion };
 }
 
 // ============================================================
@@ -2255,6 +2374,44 @@ function iniciarNubeUI() {
     else setTimeout(() => { if (!nube()) estadoNube('Nube: sin conexión', 'error'); }, 6000);
 }
 
+// ---------- Ordenar la programación pegada ----------
+function nombresConocidos() {
+    const n = [];
+    estado.equipos.forEach(eq => { n.push(eq.nombre); String(eq.alias || '').split(/[,;|]/).forEach(a => n.push(a.trim())); });
+    return n.concat(equiposDeProgramacion()).filter(Boolean);
+}
+function avisarOrden(avisos) {
+    if (avisos.length) mostrarToast(`Texto ordenado. Revisá ${avisos.length === 1 ? 'este partido' : 'estos ' + avisos.length + ' partidos'}: ${avisos[0]}${avisos.length > 1 ? '…' : ''}`, 'error');
+    else mostrarToast('Texto ordenado');
+}
+function iniciarOrdenAuto() {
+    // al pegar, el texto entra ya ordenado (con Ctrl+Z se deshace)
+    ['in-texto', 'in-texto-arb'].forEach(id => {
+        const ta = $(id);
+        ta.addEventListener('paste', (e) => {
+            const crudo = (e.clipboardData || window.clipboardData || { getData: () => '' }).getData('text');
+            if (!crudo || !/\svs\.?\s/i.test(crudo)) return;
+            const r = ordenarProgramacion(crudo, nombresConocidos());
+            if (r.texto === crudo.replace(/\r/g, '')) return;
+            e.preventDefault();
+            ta.focus();
+            if (!document.execCommand || !document.execCommand('insertText', false, r.texto)) {
+                ta.setRangeText(r.texto, ta.selectionStart, ta.selectionEnd, 'end');
+                ta.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            avisarOrden(r.avisos);
+        });
+    });
+    // botón "Ordenar": reordena todo lo que hay en la caja de la pestaña activa
+    $('btn-ordenar').addEventListener('click', () => {
+        const arb = estado.pestana === 'arbitros';
+        const r = ordenarProgramacion(arb ? estado.textoArb : estado.texto, nombresConocidos());
+        if (arb) estado.textoArb = r.texto; else estado.texto = r.texto;
+        guardarEstado(); llenarInputs(); renderActivo(true);
+        avisarOrden(r.avisos);
+    });
+}
+
 async function iniciar() {
     construirFormatos();
     construirDensidades();
@@ -2267,6 +2424,7 @@ async function iniciar() {
         estado.diseno = b.dataset.diseno;
         guardarEstado(); sincronizarDiseno(); render();
     });
+    iniciarOrdenAuto();
     $('in-texto').addEventListener('input', (e) => { estado.texto = e.target.value; guardarEstado(); renderDiferido(); });
     $('in-texto-arb').addEventListener('input', (e) => { estado.textoArb = e.target.value; guardarEstado(); renderDiferido(); });
     $('in-titulo').addEventListener('input', (e) => { estado.titulo = e.target.value; guardarEstado(); renderDiferido(); });
