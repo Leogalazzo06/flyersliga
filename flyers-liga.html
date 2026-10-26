@@ -124,6 +124,7 @@
                 <div class="flex items-center justify-between gap-2 mb-3">
                     <h2 class="seccion-titulo !mb-0">Programación</h2>
                     <div class="flex gap-2">
+                        <button type="button" id="btn-ordenar" class="btn-sec" title="Acomoda el texto pegado: categoría, zona y un partido por renglón">Ordenar</button>
                         <button type="button" id="btn-ejemplo" class="btn-sec">Ejemplo</button>
                         <button type="button" id="btn-limpiar" class="btn-sec">Borrar</button>
                     </div>
@@ -136,7 +137,7 @@
                 <div id="wrap-texto-flyers">
                 <textarea id="in-texto" class="campo" rows="16" spellcheck="false" wrap="off" placeholder="1ra y Sub-20&#10;Zona Sur - Fecha 6&#10;• Villa Dora Vs. Avenida FC – Jueves 24/09 – 20:30 Hs"></textarea>
                 <p class="campo-ayuda">
-                    Pegá la programación tal cual: cada partido en un renglón con <b>VS</b>, por ejemplo
+                    Pegá la programación tal cual te la mandan (aunque venga corrida, sin días ni horarios): se ordena sola al pegar, o con el botón <b>Ordenar</b>. Formato final: cada partido en un renglón con <b>VS</b>, por ejemplo
                     <b>Villa Dora Vs. Avenida FC – Jueves 24/09 – 20:30 Hs</b>. El día y la hora se leen solos (son opcionales).
                     Los renglones sin viñeta ni VS son títulos: los que empiezan con "Zona" quedan como zona, el resto como categoría.
                     Si el partido trae una etiqueta antes de los dos puntos (<b>Zona Sur Fecha 2: A Vs B</b>), se agrupan por esa etiqueta.
