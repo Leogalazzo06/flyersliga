@@ -347,6 +347,20 @@ function parsearProgramacion(texto) {
     return bloques;
 }
 
+// Resultados: "Dep. Argentino 2 Vs. Sp. Español 0" -> fila con l, v, gl (goles local), gv (goles visitante)
+function parsearResultados(texto) {
+    const bloques = parsearProgramacion(texto);
+    bloques.forEach(b => b.filas.forEach(f => {
+        if (!f.l || !f.v) return;
+        const ml = f.l.match(/^(.*\S)\s+\(?(\d{1,2})\)?$/);
+        const mv = f.v.match(/^(.*\S)\s+\(?(\d{1,2})\)?$/);
+        if (!ml || !mv) return;   // sin los dos marcadores se deja como partido sin resultado
+        f.l = ml[1].trim(); f.gl = Number(ml[2]);
+        f.v = mv[1].trim(); f.gv = Number(mv[2]);
+    }));
+    return bloques;
+}
+
 // ------------------------------------------------------------
 // 2) PAGINADO: reparte los bloques en flyers sin dejar títulos huérfanos
 //    y balanceando para que el último no quede casi vacío.
@@ -530,11 +544,13 @@ function itemHtml(it, sc, ctx) {
             <span style="font-family:${TEXTO}; font-weight:800; font-size:${px(tam)}; line-height:1; color:${COLOR.tinta}; text-transform:uppercase; letter-spacing:0.02em; white-space:nowrap;">${esc(it.texto)}</span></div>`;
     }
     const columnas = 3 + (ctx.hayDia ? 1 : 0) + (ctx.hayHora ? 1 : 0);
+    const wVs = ctx.hayRes ? 70 : 38;   // ancho de la columna central (VS o marcador)
+    const conMarcador = it.gl != null && it.gv != null;
     const reservado = (ctx.hayDia ? wDia : 0) + (ctx.hayHora ? wHora : 0);
     // Escudo: cuadrado fijo junto al "VS" (se reserva el lugar aunque falte, para que los nombres queden alineados)
     const escT = ctx.hayEscudos ? Math.round(H.fila * sc - 6) : 0;
     const escGap = 6;
-    const anchoNombre = (ctx.anchoUtil - 12 - 38 - reservado - (columnas - 1) * 6) / 2 - 2 - (escT ? escT + escGap : 0);
+    const anchoNombre = (ctx.anchoUtil - 12 - wVs - reservado - (columnas - 1) * 6) / 2 - 2 - (escT ? escT + escGap : 0);
     const nombre = (txt, align) => {
         const tam = ajustar(txt, 18 * sc * DENS.fs, anchoNombre, 0.45);
         const estiloTxt = `font-family:${TEXTO}; font-weight:800; font-size:${px(tam)}; line-height:1; color:${COLOR.tinta}; text-transform:uppercase; letter-spacing:0.02em; white-space:nowrap; overflow:hidden;`;
@@ -544,7 +560,7 @@ function itemHtml(it, sc, ctx) {
         const t = `<span style="display:block; min-width:0; ${estiloTxt}">${esc(txt)}</span>`;
         return `<div style="display:flex; align-items:center; gap:${escGap}px; min-width:0; justify-content:${align === 'right' ? 'flex-end' : 'flex-start'};">${align === 'right' ? t + caja : caja + t}</div>`;
     };
-    const cols = `${ctx.hayDia ? `${wDia}px ` : ''}${ctx.hayHora ? `${wHora}px ` : ''}minmax(0,1fr) 38px minmax(0,1fr)`;
+    const cols = `${ctx.hayDia ? `${wDia}px ` : ''}${ctx.hayHora ? `${wHora}px ` : ''}minmax(0,1fr) ${wVs}px minmax(0,1fr)`;
     const sede = conSede
         ? `<div style="height:${px(H.sede * sc)}; display:flex; align-items:flex-start; justify-content:center; gap:4px;">
             <svg width="9" height="11" viewBox="0 0 24 30" style="flex-shrink:0; margin-top:1px;"><path fill-rule="evenodd" fill="${COLOR.acento}" d="M12 0C5.4 0 0 5.2 0 11.7 0 20 12 30 12 30s12-10 12-18.3C24 5.2 18.6 0 12 0zM12 16.5a4.8 4.8 0 100-9.6 4.8 4.8 0 000 9.6z"/></svg>
@@ -555,7 +571,9 @@ function itemHtml(it, sc, ctx) {
         <div style="height:${alto}; ${tarjeta ? 'margin-top:-2px; ' : ''}display:grid; grid-template-columns:${cols}; align-items:center; column-gap:6px;">
             ${dia}${hora}
             ${nombre(it.l, 'right')}
-            <div style="display:flex; justify-content:center;"><span style="font-family:${TITULAR}; font-size:${px(12 * sc * DENS.fs)}; line-height:1; color:${COLOR.acento}; background:${COLOR.chipBg}; border:1.5px solid ${COLOR.celesteSuave}; border-radius:9999px; padding:3px 6px 2px; letter-spacing:0.05em;">VS</span></div>
+            <div style="display:flex; justify-content:center;">${conMarcador
+                ? `<span style="font-family:${TITULAR}; font-size:${px(18 * sc * DENS.fs)}; line-height:1; color:${COLOR.chipTexto}; background:${COLOR.celeste}; border-radius:${TEMA.chip === 'pildora' ? '9999px' : '6px'}; padding:4px 9px 3px; letter-spacing:0.06em; white-space:nowrap;">${it.gl} - ${it.gv}</span>`
+                : `<span style="font-family:${TITULAR}; font-size:${px(12 * sc * DENS.fs)}; line-height:1; color:${COLOR.acento}; background:${COLOR.chipBg}; border:1.5px solid ${COLOR.celesteSuave}; border-radius:9999px; padding:3px 6px 2px; letter-spacing:0.05em;">VS</span>`}</div>
             ${nombre(it.v, 'left')}
         </div>${sede}
     </div>`;
@@ -583,6 +601,7 @@ function htmlFlyer(pag, i, total, c) {
         nFila: 0,
         hayHora: pag.items.some(it => it.t === 'fila' && it.hora),
         hayDia: pag.items.some(it => it.t === 'fila' && it.dia),
+        hayRes: pag.items.some(it => it.t === 'fila' && it.gl != null),
         anchoUtil: f.ancho - MARGEN * 2,
         escudoDe: c.escudoDe || null,
         hayEscudos: !!c.hayEscudos,
@@ -955,7 +974,7 @@ function ordenarProgramacion(texto, conocidos = []) {
 
 // Fuera del navegador (tests en Node) exportamos solo la lógica pura
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { parsearProgramacion, parsearFila, paginarCon, repartir, alturaUtil, FORMATOS, H, htmlFlyer, DISENOS, aplicarDiseno, DENSIDADES, aplicarDensidad,
+    module.exports = { parsearProgramacion, parsearResultados, parsearFila, paginarCon, repartir, alturaUtil, FORMATOS, H, htmlFlyer, DISENOS, aplicarDiseno, DENSIDADES, aplicarDensidad,
         armarPartidos, agruparDias, paginarPlanilla, repartirPlanilla, htmlPlanilla, paletaPlanilla, fechaDe, sedeDeTitulo, A, crearBuscador, tokensEquipo, ordenarProgramacion };
 }
 
@@ -1006,6 +1025,17 @@ Veteranos +40  Fecha 4 – Sábado - Dep. Comercio (Local)
 •  Progresista Vs. Racing – 21:30 Hs 
 •  Fuimos Heroes Vs. Dep. Comercio – 22:30 Hs`;
 
+const TEXTO_EJEMPLO_RES = `Primera
+Zona Sur - Fecha 6
+•  Marcelino Ugarte 1 Vs. Deportivo Comercio 1
+•  Villa Dora 3 Vs. Avenida FC 2
+•  Sportivo Español 0 Vs. R. Escalada 2
+•  Progresista 2 Vs. M. Renz 0
+•  Dep. Argentino 2 Vs. Sp. Español 0
+Zona Norte - Fecha 6
+•  Deportivo E. Urien 0 Vs. Fuimos Héroes 1
+•  Juventud 4 Vs. Mártires Córdoba 1`;
+
 const ESTADO_INICIAL = {
     formato: 'vertical',
     diseno: 'clasico',
@@ -1013,6 +1043,8 @@ const ESTADO_INICIAL = {
     logoTam: 84,
     texto: TEXTO_EJEMPLO,       // programación de la pestaña Flyers
     textoArb: TEXTO_EJEMPLO,    // programación de la pestaña Árbitros (independiente de la de flyers)
+    textoRes: TEXTO_EJEMPLO_RES,   // resultados (pestaña Resultados)
+    tituloRes: 'RESULTADOS\nDE LA FECHA',
     titulo: 'PROGRAMACIÓN\nTENTATIVA',
     fecha: '',
     pie: 'A.F.O.CH',
@@ -1054,7 +1086,9 @@ function cargarEstado() {
             if (!DISENOS[e.diseno]) e.diseno = ESTADO_INICIAL.diseno;
             if (!DENSIDADES[e.densidad]) e.densidad = ESTADO_INICIAL.densidad;
             e.logoTam = Math.max(50, Math.min(124, Number(e.logoTam) || 84));
-            if (e.pestana !== 'arbitros' && e.pestana !== 'tabla') e.pestana = 'flyers';
+            if (e.pestana !== 'arbitros' && e.pestana !== 'tabla' && e.pestana !== 'resultados') e.pestana = 'flyers';
+            e.textoRes = typeof g.textoRes === 'string' ? g.textoRes : TEXTO_EJEMPLO_RES;
+            e.tituloRes = typeof g.tituloRes === 'string' ? g.tituloRes : ESTADO_INICIAL.tituloRes;
             const tb = e.tabla;
             e.tabla = (tb && typeof tb === 'object' && Array.isArray(tb.fechas))
                 ? { base: String(tb.base || ''), cats: String(tb.cats == null ? '1ra, primera' : tb.cats), res: (tb.res && typeof tb.res === 'object' && !Array.isArray(tb.res)) ? tb.res : {}, titulo: String(tb.titulo || ''), fechas: tb.fechas.map(x => ({ etiqueta: String((x && x.etiqueta) || ''), texto: String((x && x.texto) || '') })) }
@@ -1148,7 +1182,8 @@ async function render() {
 }
 function renderFlyers() {
     const f = FORMATOS[estado.formato];
-    const bloques = parsearProgramacion(estado.texto);
+    const res = estado.pestana === 'resultados';
+    const bloques = res ? parsearResultados(estado.textoRes) : parsearProgramacion(estado.texto);
     // Escudos: si hay al menos uno cargado, las filas se hacen más altas (antes de repartir los partidos)
     const hayEscudos = !!estado.usarEscudos && estado.equipos.some(e => e.escudo);
     H.fila = hayEscudos ? DENS.filaEsc : DENS.fila;
@@ -1158,11 +1193,11 @@ function renderFlyers() {
     const paginas = repartir(bloques, alturaUtil(f));
     const total = paginas.length;
     const nPartidos = bloques.reduce((a, b) => a + b.filas.length, 0);
-    const contexto = { f, diseno: estado.diseno, logoTam: estado.logoTam, titulo: estado.titulo, fecha: estado.fecha, pie: estado.pie, logo: logoActual(), escudoDe, hayEscudos };
+    const contexto = { f, diseno: estado.diseno, logoTam: estado.logoTam, titulo: res ? estado.tituloRes : estado.titulo, fecha: estado.fecha, pie: estado.pie, logo: logoActual(), escudoDe, hayEscudos };
 
     $('resumen').textContent = total
         ? `${nPartidos} ${nPartidos === 1 ? 'partido' : 'partidos'} → ${total} ${total === 1 ? 'flyer' : 'flyers'}`
-        : 'Pegá la programación para ver los flyers.';
+        : (res ? 'Pegá los resultados para ver los banners.' : 'Pegá la programación para ver los flyers.');
     $('btn-todos').disabled = !total;
     actualizarPanelEscudos();
 
@@ -1186,7 +1221,7 @@ function renderFlyers() {
     // Copia a tamaño real, fuera de pantalla, de donde sale el PNG
     $('export').innerHTML = htmls.map(h => `<div style="width:${f.ancho}px; height:${f.alto}px;">${h}</div>`).join('');
     flyersActuales = paginas.map((p, i) => ({
-        nombre: `afoch-programacion-${f.archivo}-${i + 1}de${total}.png`,
+        nombre: `afoch-${res ? 'resultados' : 'programacion'}-${f.archivo}-${i + 1}de${total}.png`,
         nodo: $('export').querySelector(`[data-flyer="${i}"]`),
     }));
     if (visorIdx >= 0) pintarVisor();   // si la vista ampliada está abierta, se actualiza
@@ -1270,6 +1305,8 @@ async function prepararFuentes() {
         ].map(x => document.fonts.load(x).catch(() => null)));
         await document.fonts.ready;
     }
+    // Primero las fuentes incrustadas en fuentes-liga.js (no dependen de internet)
+    if (window.CSS_FUENTES_LIGA) return window.CSS_FUENTES_LIGA;
     let css = '';
     try {
         css = (await Promise.all(FUENTES_GF.map(cssFuenteIncrustada))).join('\n');
@@ -1394,7 +1431,8 @@ function sincronizarFormato() {
 function llenarInputs() {
     $('in-texto').value = estado.texto;
     $('in-texto-arb').value = estado.textoArb;
-    $('in-titulo').value = estado.titulo;
+    $('in-texto-res').value = estado.textoRes;
+    $('in-titulo').value = estado.pestana === 'resultados' ? estado.tituloRes : estado.titulo;
     $('in-fecha').value = estado.fecha;
     $('in-pie').value = estado.pie;
     $('logo-estado').textContent = estado.logoSubido ? 'Logo subido desde tu equipo' : (logoArchivo ? 'Usando afoch-logo.png' : 'Sin logo (se muestra el texto A.F.O.CH)');
@@ -1452,7 +1490,7 @@ function imagenADataURL(archivo, max = 200) {
 // Nombres de equipos que aparecen en la programación (sin repetir)
 function equiposDeProgramacion() {
     const vistos = new Map();
-    [estado.texto, estado.textoArb].forEach(t => parsearProgramacion(t).forEach(b => b.filas.forEach(f => {
+    [parsearProgramacion(estado.texto), parsearProgramacion(estado.textoArb), parsearResultados(estado.textoRes)].forEach(bl => bl.forEach(b => b.filas.forEach(f => {
         if (!f.l) return;
         [f.l, f.v].forEach(n => { const k = sinAcentos(n).replace(/\s+/g, ' ').trim(); if (!vistos.has(k)) vistos.set(k, n); });
     })));
@@ -1690,7 +1728,7 @@ function renderDiferido(lista = true) {
 }
 
 function aplicarPestana(p) {
-    const arb = p === 'arbitros', hist = p === 'historial', tab = p === 'tabla';
+    const arb = p === 'arbitros', hist = p === 'historial', tab = p === 'tabla', res = p === 'resultados';
     if (visorIdx >= 0) cerrarVisor();
     $('vista-flyers').classList.toggle('hidden', arb || hist || tab);
     $('vista-tabla').classList.toggle('hidden', !tab);
@@ -1699,9 +1737,14 @@ function aplicarPestana(p) {
     // La tarjeta (guardar/borrar) se mueve de una pestaña a la otra, pero cada pestaña tiene su propio texto
     if (!hist && !tab) $(arb ? 'slot-prog-arb' : 'slot-prog-flyers').appendChild($('sec-programacion'));
     // Cada pestaña tiene su propio cuadro de texto dentro de la misma tarjeta
-    $('wrap-texto-flyers').classList.toggle('hidden', arb);
+    $('wrap-texto-flyers').classList.toggle('hidden', arb || res);
     $('wrap-texto-arb').classList.toggle('hidden', !arb);
-    if (!hist && !tab) sincronizarBotonesProg();
+    $('wrap-texto-res').classList.toggle('hidden', !res);
+    // En Resultados no se guarda en la nube ni se ordena: solo se arma y se descarga
+    $('fila-prog-guardar').classList.toggle('hidden', res);
+    $('btn-ordenar').classList.toggle('hidden', res);
+    $('in-titulo').value = res ? estado.tituloRes : estado.titulo;
+    if (!hist && !tab && !res) sincronizarBotonesProg();
     document.querySelectorAll('[data-pestana]').forEach(b => {
         const on = b.dataset.pestana === p;
         b.classList.toggle('tab-activa', on);
@@ -2427,7 +2470,8 @@ async function iniciar() {
     iniciarOrdenAuto();
     $('in-texto').addEventListener('input', (e) => { estado.texto = e.target.value; guardarEstado(); renderDiferido(); });
     $('in-texto-arb').addEventListener('input', (e) => { estado.textoArb = e.target.value; guardarEstado(); renderDiferido(); });
-    $('in-titulo').addEventListener('input', (e) => { estado.titulo = e.target.value; guardarEstado(); renderDiferido(); });
+    $('in-texto-res').addEventListener('input', (e) => { estado.textoRes = e.target.value; guardarEstado(); renderDiferido(); });
+    $('in-titulo').addEventListener('input', (e) => { if (estado.pestana === 'resultados') estado.tituloRes = e.target.value; else estado.titulo = e.target.value; guardarEstado(); renderDiferido(); });
     $('in-fecha').addEventListener('input', (e) => { estado.fecha = e.target.value; guardarEstado(); renderDiferido(); });
     $('in-pie').addEventListener('input', (e) => { estado.pie = e.target.value; guardarEstado(); renderDiferido(); });
     $('tiles-densidad').addEventListener('click', (e) => {
@@ -2451,8 +2495,8 @@ async function iniciar() {
     $('in-logo').addEventListener('change', (e) => { leerLogo(e.target.files[0]); e.target.value = ''; });
     $('btn-logo-quitar').addEventListener('click', () => { estado.logoSubido = ''; guardarEstado(); llenarInputs(); render(); });
     // Ejemplo y Borrar empiezan de cero: ya no se está editando una programación guardada
-    $('btn-ejemplo').addEventListener('click', () => { if (estado.pestana === 'arbitros') estado.textoArb = TEXTO_EJEMPLO; else estado.texto = TEXTO_EJEMPLO; fijarProg(tipoActual(), '', ''); guardarEstado(); llenarInputs(); sincronizarBotonesProg(); renderActivo(true); });
-    $('btn-limpiar').addEventListener('click', () => { if (estado.pestana === 'arbitros') estado.textoArb = ''; else estado.texto = ''; fijarProg(tipoActual(), '', ''); guardarEstado(); llenarInputs(); sincronizarBotonesProg(); renderActivo(true); });
+    $('btn-ejemplo').addEventListener('click', () => { if (estado.pestana === 'resultados') { estado.textoRes = TEXTO_EJEMPLO_RES; guardarEstado(); llenarInputs(); renderActivo(true); return; } if (estado.pestana === 'arbitros') estado.textoArb = TEXTO_EJEMPLO; else estado.texto = TEXTO_EJEMPLO; fijarProg(tipoActual(), '', ''); guardarEstado(); llenarInputs(); sincronizarBotonesProg(); renderActivo(true); });
+    $('btn-limpiar').addEventListener('click', () => { if (estado.pestana === 'resultados') { estado.textoRes = ''; guardarEstado(); llenarInputs(); renderActivo(true); return; } if (estado.pestana === 'arbitros') estado.textoArb = ''; else estado.texto = ''; fijarProg(tipoActual(), '', ''); guardarEstado(); llenarInputs(); sincronizarBotonesProg(); renderActivo(true); });
     $('previews').addEventListener('click', (e) => {
         const v = e.target.closest('[data-ver]');
         if (v) { abrirVisor(Number(v.dataset.ver)); return; }
