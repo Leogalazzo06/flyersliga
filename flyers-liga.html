@@ -107,6 +107,7 @@
             <p class="text-[0.7rem] font-semibold text-sky-100 mt-1">Liga A.F.O.CH · pegá la programación y descargá los flyers de la fecha o la planilla de árbitros</p>
             <nav class="flex gap-2 mt-3" role="tablist" aria-label="Secciones">
                 <button type="button" class="tab" role="tab" data-pestana="flyers">Flyers de partidos</button>
+                <button type="button" class="tab" role="tab" data-pestana="resultados">Resultados</button>
                 <button type="button" class="tab" role="tab" data-pestana="arbitros">Árbitros</button>
                 <button type="button" class="tab" role="tab" data-pestana="tabla">Posiciones</button>
                 <button type="button" class="tab" role="tab" data-pestana="historial">Historial</button>
@@ -129,7 +130,7 @@
                         <button type="button" id="btn-limpiar" class="btn-sec">Borrar</button>
                     </div>
                 </div>
-                <div class="flex items-center gap-2 flex-wrap mb-3">
+                <div id="fila-prog-guardar" class="flex items-center gap-2 flex-wrap mb-3">
                     <button type="button" id="btn-prog-guardar" class="btn-guardar !py-2 !px-4 !text-xs">Guardar</button>
                     <button type="button" id="btn-prog-nueva" class="btn-sec hidden">Guardar como nueva</button>
                     <span id="prog-estado" class="campo-ayuda !mt-0"></span>
@@ -143,6 +144,10 @@
                     Si el partido trae una etiqueta antes de los dos puntos (<b>Zona Sur Fecha 2: A Vs B</b>), se agrupan por esa etiqueta.
                     También sirve el formato con asteriscos <b>*TEXTO*</b>. Una línea con <b>---</b> corta y empieza un flyer nuevo.
                 </p>
+                </div>
+                <div id="wrap-texto-res" class="hidden">
+                    <textarea id="in-texto-res" class="campo" rows="16" spellcheck="false" wrap="off" placeholder="Primera&#10;Zona Sur - Fecha 6&#10;• Dep. Argentino 2 Vs. Sp. Español 0"></textarea>
+                    <p class="campo-ayuda">Escribí cada resultado en un renglón: <b>Dep. Argentino 2 Vs. Sp. Español 0</b> (el goleo va pegado al nombre de cada equipo). Los títulos (categoría, zona) y el día/hora funcionan igual que en la programación. Esta caja es independiente de las otras pestañas y se guarda en este navegador. Diseño, formato, logo y escudos son los mismos de Flyers de partidos.</p>
                 </div>
                 <div id="wrap-texto-arb" class="hidden">
                     <textarea id="in-texto-arb" class="campo" rows="16" spellcheck="false" wrap="off" placeholder="1ra y Sub-20&#10;Zona Sur - Fecha 6&#10;• Villa Dora Vs. Avenida FC – Jueves 24/09 – 20:30 Hs"></textarea>
@@ -446,6 +451,7 @@
 
     <!-- Firebase (módulo): deja listo window.fb. Hay que abrir la página desde un servidor, no con doble clic. -->
     <script type="module" src="firebase-liga.js"></script>
+    <script src="fuentes-liga.js"></script>
     <script src="imagekit-liga.js"></script>
     <script src="tabla-liga.js"></script>
     <script src="flyers-liga.js"></script>
