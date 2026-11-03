@@ -1086,7 +1086,7 @@ function cargarEstado() {
             if (!DISENOS[e.diseno]) e.diseno = ESTADO_INICIAL.diseno;
             if (!DENSIDADES[e.densidad]) e.densidad = ESTADO_INICIAL.densidad;
             e.logoTam = Math.max(50, Math.min(124, Number(e.logoTam) || 84));
-            if (e.pestana !== 'arbitros' && e.pestana !== 'tabla' && e.pestana !== 'resultados') e.pestana = 'flyers';
+            if (e.pestana !== 'arbitros' && e.pestana !== 'tabla' && e.pestana !== 'resultados' && e.pestana !== 'cruces') e.pestana = 'flyers';
             e.textoRes = typeof g.textoRes === 'string' ? g.textoRes : TEXTO_EJEMPLO_RES;
             e.tituloRes = typeof g.tituloRes === 'string' ? g.tituloRes : ESTADO_INICIAL.tituloRes;
             const tb = e.tabla;
@@ -1719,6 +1719,7 @@ const hayHora = (h) => /^\d{1,2}:\d{2}$/.test(h);
 function renderActivo(lista = true) {
     if (estado.pestana === 'historial') return Promise.resolve();   // el historial no dibuja flyers
     if (estado.pestana === 'tabla') return window.tablaLiga ? window.tablaLiga.render() : Promise.resolve();
+    if (estado.pestana === 'cruces') return window.crucesLiga ? window.crucesLiga.render() : Promise.resolve();
     return estado.pestana === 'arbitros' ? renderArb(lista) : render();
 }
 function renderDiferido(lista = true) {
@@ -1728,14 +1729,15 @@ function renderDiferido(lista = true) {
 }
 
 function aplicarPestana(p) {
-    const arb = p === 'arbitros', hist = p === 'historial', tab = p === 'tabla', res = p === 'resultados';
+    const arb = p === 'arbitros', hist = p === 'historial', tab = p === 'tabla', res = p === 'resultados', cr = p === 'cruces';
     if (visorIdx >= 0) cerrarVisor();
-    $('vista-flyers').classList.toggle('hidden', arb || hist || tab);
+    $('vista-flyers').classList.toggle('hidden', arb || hist || tab || cr);
+    $('vista-cruces').classList.toggle('hidden', !cr);
     $('vista-tabla').classList.toggle('hidden', !tab);
     $('vista-arbitros').classList.toggle('hidden', !arb);
     $('vista-historial').classList.toggle('hidden', !hist);
     // La tarjeta (guardar/borrar) se mueve de una pestaña a la otra, pero cada pestaña tiene su propio texto
-    if (!hist && !tab) $(arb ? 'slot-prog-arb' : 'slot-prog-flyers').appendChild($('sec-programacion'));
+    if (!hist && !tab && !cr) $(arb ? 'slot-prog-arb' : 'slot-prog-flyers').appendChild($('sec-programacion'));
     // Cada pestaña tiene su propio cuadro de texto dentro de la misma tarjeta
     $('wrap-texto-flyers').classList.toggle('hidden', arb || res);
     $('wrap-texto-arb').classList.toggle('hidden', !arb);
@@ -1744,7 +1746,7 @@ function aplicarPestana(p) {
     $('fila-prog-guardar').classList.toggle('hidden', res);
     $('btn-ordenar').classList.toggle('hidden', res);
     $('in-titulo').value = res ? estado.tituloRes : estado.titulo;
-    if (!hist && !tab && !res) sincronizarBotonesProg();
+    if (!hist && !tab && !res && !cr) sincronizarBotonesProg();
     document.querySelectorAll('[data-pestana]').forEach(b => {
         const on = b.dataset.pestana === p;
         b.classList.toggle('tab-activa', on);
@@ -2523,6 +2525,21 @@ async function iniciar() {
         publicar: (htmls, nombres, f) => {   // deja listos los PNG a tamaño real y la vista ampliada
             htmlsActuales = htmls;
             vista = { ancho: f.ancho, alto: f.alto, ratio: ANCHO_SALIDA / f.ancho, fondo: COLOR.fondo };
+            $('export').innerHTML = htmls.map(h => `<div style="width:${f.ancho}px; height:${f.alto}px;">${h}</div>`).join('');
+            flyersActuales = nombres.map((nombre, i) => ({ nombre, nodo: $('export').querySelector(`[data-flyer="${i}"]`) }));
+            if (visorIdx >= 0) pintarVisor();
+        },
+    });
+
+    if (window.crucesLiga) window.crucesLiga.iniciar({
+        estado, $, guardarEstado, renderDiferido, abrirVisor, descargar, precargarEscudos, FORMATOS, TEXTO, TITULAR,
+        logo: logoActual, cargarLogo: cargarLogoArchivo,
+        slug: (t) => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'cruces',
+        escudoDe: () => { const b = crearBuscador(estado.equipos); return (n) => { const e = b(n); const u = (e && e.escudo) || ''; return cacheEscudos.get(u) || u; }; },
+        nombresActuales: () => flyersActuales.map((_, i) => i),
+        publicar: (htmls, nombres, f) => {   // deja listos los PNG a tamaño real y la vista ampliada
+            htmlsActuales = htmls;
+            vista = { ancho: f.ancho, alto: f.alto, ratio: ANCHO_SALIDA / f.ancho, fondo: '#050A18' };
             $('export').innerHTML = htmls.map(h => `<div style="width:${f.ancho}px; height:${f.alto}px;">${h}</div>`).join('');
             flyersActuales = nombres.map((nombre, i) => ({ nombre, nodo: $('export').querySelector(`[data-flyer="${i}"]`) }));
             if (visorIdx >= 0) pintarVisor();
