@@ -105,11 +105,12 @@
                 <span id="nube-estado" class="nube-chip" data-tipo="espera" role="status">Nube: conectando…</span>
             </div>
             <p class="text-[0.7rem] font-semibold text-sky-100 mt-1">Liga A.F.O.CH · pegá la programación y descargá los flyers de la fecha o la planilla de árbitros</p>
-            <nav class="flex gap-2 mt-3" role="tablist" aria-label="Secciones">
+            <nav class="flex flex-wrap gap-2 mt-3" role="tablist" aria-label="Secciones">
                 <button type="button" class="tab" role="tab" data-pestana="flyers">Flyers de partidos</button>
                 <button type="button" class="tab" role="tab" data-pestana="resultados">Resultados</button>
                 <button type="button" class="tab" role="tab" data-pestana="arbitros">Árbitros</button>
                 <button type="button" class="tab" role="tab" data-pestana="tabla">Posiciones</button>
+                <button type="button" class="tab" role="tab" data-pestana="cruces">Cruces</button>
                 <button type="button" class="tab" role="tab" data-pestana="historial">Historial</button>
             </nav>
         </div>
@@ -420,6 +421,61 @@
         </div>
     </main>
 
+    <!-- ============ PESTAÑA CRUCES ============ -->
+    <main id="vista-cruces" class="hidden max-w-7xl mx-auto px-4 sm:px-6 py-5 grid gap-5 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] items-start">
+        <div class="flex flex-col gap-4">
+            <section class="seccion">
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <h2 class="seccion-titulo !mb-0">Cruces</h2>
+                    <div class="flex gap-2">
+                        <button type="button" id="cr-btn-ejemplo" class="btn-sec">Ejemplo</button>
+                        <button type="button" id="cr-btn-borrar" class="btn-sec">Borrar</button>
+                    </div>
+                </div>
+                <textarea id="cr-texto" class="campo" rows="18" spellcheck="false" wrap="off" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre; font-size:0.74rem; font-weight:500; overflow:auto;" placeholder="COPA DE ORO:&#10;A: 1° ZONA NORTE: EQUIPO 1 VS 4° ZONA SUR: EQUIPO 2"></textarea>
+                <p class="campo-ayuda">Pegá los cruces tal cual te los mandan. Sale <b>un flyer por cada copa o categoría</b>. Cada cruce va en un renglón: <b>A: 1° ZONA NORTE: UNION SB VS 4° ZONA SUR: M. UGARTE</b>. Si un lugar todavía no está definido, separá las opciones con una barra (<b>AVENIDA FC/DEP. COMERCIO</b>) y se muestran las dos. Los títulos como <b>COPA DE ORO:</b> o <b>... CUARTOS DE FINAL EN SUB-20:</b> arman cada llave, y <b>A VS C</b> / <b>B VS D</b> definen las semifinales.</p>
+                <p id="cr-avisos" class="arb-aviso hidden"></p>
+            </section>
+            <section class="seccion">
+                <h2 class="seccion-titulo">Encabezado</h2>
+                <div class="flex flex-col gap-3">
+                    <div><label class="campo-label" for="cr-torneo">Torneo (línea chica)</label><input id="cr-torneo" class="campo" type="text" maxlength="50" placeholder="TORNEO CLAUSURA 2026"></div>
+                    <div><label class="campo-label" for="cr-titulo">Título</label><input id="cr-titulo" class="campo" type="text" maxlength="40" placeholder="CUARTOS DE FINAL"></div>
+                    <div><label class="campo-label" for="cr-pie">Texto del pie</label><input id="cr-pie" class="campo" type="text" maxlength="40" placeholder="A.F.O.CH"></div>
+                </div>
+                <p class="campo-ayuda">El logo de la liga es el mismo de la pestaña Flyers.</p>
+            </section>
+            <section class="seccion">
+                <h2 class="seccion-titulo">Diseño</h2>
+                <div id="cr-tiles-paleta" class="grid grid-cols-2 gap-2"></div>
+            </section>
+            <section class="seccion">
+                <h2 class="seccion-titulo">Formato</h2>
+                <div id="cr-tiles-formato" class="grid grid-cols-2 gap-2"></div>
+            </section>
+            <section class="seccion">
+                <div class="flex items-center justify-between gap-2">
+                    <h2 class="seccion-titulo !mb-0">Escudos</h2>
+                    <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
+                        <input id="cr-chk-escudos" type="checkbox" class="accent-liga"> Mostrar
+                    </label>
+                </div>
+                <p class="campo-ayuda">Se usan los escudos que ya cargaste en la pestaña Flyers. Donde falta uno aparece un círculo con las iniciales.</p>
+            </section>
+        </div>
+        <div class="flex flex-col gap-4 min-w-0">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <p id="cr-resumen" class="text-sm font-extrabold text-slate-700"></p>
+                <button type="button" id="cr-btn-todos" class="btn-guardar">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+                    Descargar todos
+                </button>
+            </div>
+            <div id="cr-previews" class="grid gap-5 justify-items-center bg-slate-50 rounded-2xl border border-slate-200 p-5" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));"></div>
+            <p class="text-[0.7rem] font-semibold text-slate-400">Se descargan en PNG de 1080 px de ancho, uno por llave. La copa está dibujada (dorada para Copa de Oro, plateada para Copa de Plata).</p>
+        </div>
+    </main>
+
     <!-- ============ PESTAÑA HISTORIAL ============ -->
     <main id="vista-historial" class="hidden max-w-3xl mx-auto px-4 sm:px-6 py-5">
         <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
@@ -454,6 +510,7 @@
     <script src="fuentes-liga.js"></script>
     <script src="imagekit-liga.js"></script>
     <script src="tabla-liga.js"></script>
+    <script src="cruces-liga.js"></script>
     <script src="flyers-liga.js"></script>
 </body>
 </html>
