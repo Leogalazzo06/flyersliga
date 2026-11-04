@@ -14,6 +14,8 @@
 //   A: 1° ZONA NORTE: EQUIPO 1 VS 4° ZONA SUR: EQUIPO 2   -> cruce (A, B, C, D)
 //   MARCELINO UGARTE/ALVEAR                               -> si todavía no se sabe, separar con /
 //   SEMIFINALES: / A VS C / B VS D                        -> quién se cruza en semis (opcional)
+//   ... – Sábado 14/11 – 16:00 Hs                         -> día y hora (opcional) al final de un cruce, de una semi o de la FINAL
+//   A: Sábado 14/11 – 16:00 Hs                            -> o en un renglón aparte, para agregarlos después
 // ============================================================
 (function () {
     'use strict';
@@ -24,38 +26,41 @@
 
 TORNEO CLAUSURA DE AFOCH 2026 CRUCES DE CUARTOS DE FINAL EN PRIMERA DIVISION:
 COPA DE ORO:
-A: 1° ZONA NORTE: UNION DE SAN BERNARDO FC VS 4° ZONA SUR: MARCELINO UGARTE/ALVEAR
-C: 2° ZONA SUR: AVENIDA FC/DEPORTIVO COMERCIO VS 3° ZONA NORTE: COOPERATIVA
+A: 1° ZONA NORTE: UNION DE SAN BERNARDO FC VS 4° ZONA SUR: MARCELINO UGARTE/ALVEAR – 14:00 Hs
+C: 2° ZONA SUR: AVENIDA FC/DEPORTIVO COMERCIO VS 3° ZONA NORTE: COOPERATIVA – 14:00 Hs
 
-B: 2° ZONA NORTE: RACING FC VS 3° ZONA SUR: ATLÉTICO ALVEAR/UGARTE
-D: 1° ZONA SUR: AVENIDA FC/DEPORTIVO COMERCIO VS 4° ZONA NORTE: POLIDEPORTIVO SAMUHU
+B: 2° ZONA NORTE: RACING FC VS 3° ZONA SUR: ATLÉTICO ALVEAR/UGARTE – 14:00 Hs
+D: 1° ZONA SUR: AVENIDA FC/DEPORTIVO COMERCIO VS 4° ZONA NORTE: POLIDEPORTIVO SAMUHU – 14:00 Hs
 
 SEMIFINALES:
-A VS C
-B VS D
+A VS C – 14:00 Hs
+B VS D – 14:00 Hs
+FINAL – 14:00 Hs
 
 COPA DE PLATA:
-A: 5° ZONA SUR: R. ESCALADA/PROGRESISTA VS 8° ZONA NORTE: FUIMOS HEROES
-C: 6° ZONA NORTE: DEP. MARTIRES CBA/PROGRESISTA VS 7° ZONA SUR: DEP. ARGENTINO/PROGRESISTA/ESCALADA
+A: 5° ZONA SUR: R. ESCALADA/PROGRESISTA VS 8° ZONA NORTE: FUIMOS HEROES – 14:00 Hs
+C: 6° ZONA NORTE: DEP. MARTIRES CBA/PROGRESISTA VS 7° ZONA SUR: DEP. ARGENTINO/PROGRESISTA/ESCALADA – 14:00 Hs
 
-B: 5° ZONA NORTE: DEPORTIVO ENRIQUE URIEN VS 8° ZONA SUR: SPORTIVO ESPAÑOL
-D: 6° ZONA SUR: UNION PROGRESISTA/R. ESCALADA VS 7° ZONA NORTE: JUVENTUD
+B: 5° ZONA NORTE: DEPORTIVO ENRIQUE URIEN VS 8° ZONA SUR: SPORTIVO ESPAÑOL – 14:00 Hs
+D: 6° ZONA SUR: UNION PROGRESISTA/R. ESCALADA VS 7° ZONA NORTE: JUVENTUD – 14:00 Hs
 
 SEMIFINALES:
-A VS C
-B VS D
+A VS C – 14:00 Hs
+B VS D – 14:00 Hs
+FINAL – 14:00 Hs
 
 TORNEO CLAUSURA DE AFOCH 2026 CRUCES DE CUARTOS DE FINAL EN SUB-20:
 
-A: 1° ZONA NORTE: COOPERATIVA VS 4° ZONA SUR: U. PROGRESISTA
-C: 2° ZONA SUR: DEPORTIVO COMERCIO VS 3° ZONA NORTE: MARTIRES CORDOBA
+A: 1° ZONA NORTE: COOPERATIVA VS 4° ZONA SUR: U. PROGRESISTA – 14:00 Hs
+C: 2° ZONA SUR: DEPORTIVO COMERCIO VS 3° ZONA NORTE: MARTIRES CORDOBA – 14:00 Hs
 
-B: 2° ZONA NORTE: UNION SB VS 3° ZONA SUR: M. UGARTE
-D: 1° ZONA SUR: AVENIDA FC VS 4° ZONA NORTE: RACING FC
+B: 2° ZONA NORTE: UNION SB VS 3° ZONA SUR: M. UGARTE – 14:00 Hs
+D: 1° ZONA SUR: AVENIDA FC VS 4° ZONA NORTE: RACING FC – 14:00 Hs
 
 SEMIFINALES:
-A VS C
-B VS D`;
+A VS C – 14:00 Hs
+B VS D – 14:00 Hs
+FINAL – 14:00 Hs`;
 
     const DEFECTO = {
         texto: EJEMPLO,
@@ -94,6 +99,23 @@ B VS D`;
     // 1) PARSER: texto -> llaves [{ cat, copa, qf: {A: {a, b}}, semis: [[A,C],[B,D]] }]
     //    cada lado = { seed: '1° ZONA NORTE', opts: ['AVENIDA FC', 'DEPORTIVO COMERCIO'] }
     // ------------------------------------------------------------
+    const DIAS_ABREV = { lunes: 'LUN', martes: 'MAR', miercoles: 'MIÉ', jueves: 'JUE', viernes: 'VIE', sabado: 'SÁB', domingo: 'DOM' };
+    // Saca de un renglón el día, la fecha y la hora (todo opcional). Devuelve el texto que queda y el horario encontrado.
+    function extraerHorario(l) {
+        let t = String(l), dia = '', fecha = '', hora = '';
+        t = t.replace(/\b(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\b/i, (m) => { dia = DIAS_ABREV[sinAcentos(m).toLowerCase()] || ''; return ' '; });
+        t = t.replace(/\b(\d{1,2})\s*\/\s*(\d{1,2})\b/, (m, d, mes) => { fecha = `${Number(d)}/${Number(mes)}`; return ' '; });
+        // Hora: 14:00 / 14;00 / 14:00 hs / 14.00hs / 14 hs / 14h / 14 horas (el punto solo vale si trae "hs", para no confundir con fechas)
+        t = t.replace(/\b(\d{1,2})\s*[:;]\s*(\d{2})\s*(?:hs?\b\.?|horas?\b)?|\b(\d{1,2})\s*\.\s*(\d{2})\s*(?:hs?\b\.?|horas?\b)|\b(\d{1,2})\s*(?:hs?|horas?)\b\.?/i, (m, h1, m1, h2, m2, h3) => {
+            const h = Number(h1 != null ? h1 : h2 != null ? h2 : h3);
+            const mi = m1 != null ? m1 : m2 != null ? m2 : '00';
+            if (h <= 24) hora = `${String(h).padStart(2, '0')}:${mi} HS`;
+            return ' ';
+        });
+        if (!dia && !fecha && !hora) return { texto: String(l), hor: null };
+        t = t.replace(/\s+/g, ' ').replace(/\s*[-–—|,·:]\s*(?=[-–—|,·]\s|$)/g, ' ').replace(/[\s\-–—|,·:]+$/, '').replace(/^[\s\-–—|,·]+/, '').trim();
+        return { texto: t, hor: { dia, fecha, hora } };
+    }
     const limpiar = (l) => String(l).replace(/[\u200b\t\u00a0]/g, ' ').replace(/^[\s•*·▪●\-–—]+/, '').replace(/\*+/g, '').replace(/\s+/g, ' ').trim();
 
     function detectarCategoria(l) {
@@ -113,25 +135,30 @@ B VS D`;
     function parsear(texto) {
         const llaves = [], avisos = [];
         let cat = '', copa = '', cur = null;
-        const nueva = () => { cur = { cat, copa, qf: {}, orden: [], semis: [] }; llaves.push(cur); return cur; };
+        const nueva = () => { cur = { cat, copa, qf: {}, orden: [], semis: [], semisHor: [], hor: {}, final: null }; llaves.push(cur); return cur; };
         String(texto || '').split(/\r?\n/).forEach(raw => {
             const l = limpiar(raw);
             if (!l) return;
             let m;
             if (/cruces/i.test(l)) { cat = detectarCategoria(l) || cat; copa = ''; cur = null; return; }
             if ((m = l.match(/^copa\s+de\s+([a-záéíóúñ]+)\s*:?$/i))) { copa = m[1].toUpperCase(); nueva(); return; }
-            if (/^semifinales?\s*:?$/i.test(l)) return;
-            if ((m = l.match(/^([A-H])\s+vs\.?\s+([A-H])$/i))) {
-                if (cur) cur.semis.push([m[1].toUpperCase(), m[2].toUpperCase()]);
+            const ex = extraerHorario(l);
+            let lt = ex.texto.replace(/^semifinal(?:es)?\s*\d?\s*:?\s*/i, '').trim();
+            if (!lt && /^semifinal/i.test(l) && !ex.hor) return;
+            if (/^(la\s+)?final$/i.test(lt)) { if (cur && ex.hor) cur.final = ex.hor; return; }
+            if ((m = lt.match(/^([A-H])\s+vs\.?\s+([A-H])$/i))) {
+                if (cur) { cur.semis.push([m[1].toUpperCase(), m[2].toUpperCase()]); cur.semisHor.push(ex.hor); }
                 return;
             }
-            if ((m = l.match(/^([A-H])\s*[:\-.)]\s*(.+?)\s+vs\.?\s+(.+)$/i))) {
+            if ((m = lt.match(/^([A-H])\s*[:\-.)]\s*(.+?)\s+vs\.?\s+(.+)$/i))) {
                 if (!cur) nueva();
                 const k = m[1].toUpperCase();
                 cur.qf[k] = { a: parsearLado(m[2]), b: parsearLado(m[3]) };
                 if (!cur.orden.includes(k)) cur.orden.push(k);
+                if (ex.hor) cur.hor[k] = ex.hor;
                 return;
             }
+            if (ex.hor && cur && (m = lt.match(/^([A-H])$/i))) { cur.hor[m[1].toUpperCase()] = ex.hor; return; }
             avisos.push(`No entendí este renglón: “${l.slice(0, 60)}”`);
         });
         const validas = llaves.filter(b => b.orden.length);
@@ -143,6 +170,7 @@ B VS D`;
             if (s.length < 2 && letras[1] && letras[3]) s.push([letras[1], letras[3]]);
             while (s.length < 2) s.push([letras[0] || 'A', letras[1] || 'B']);
             b.semis = s;
+            b.semisHor = [b.semisHor[0] || null, b.semisHor[1] || null];
         });
         return { llaves: validas, avisos };
     }
@@ -176,6 +204,14 @@ B VS D`;
             <path d="M50 30 L52.6 37 L60 37.4 L54.2 42 L56.2 49 L50 45 L43.8 49 L45.8 42 L40 37.4 L47.4 37 Z" fill="url(#${g}-s)" stroke="none" opacity="0.9"/>
             <path d="M35 24 C36 40 40 52 46 61" stroke="#fff" stroke-width="1.4" opacity="0.35"/>
         </svg>`;
+    }
+
+    const fmtFecha = (h) => (h ? [h.dia, h.fecha].filter(Boolean).join(' ') : '');
+    // Línea "SÁB 14/11 · 16:00 HS" (fecha en blanco, hora en el color de acento)
+    function horarioHtml(h, A, P) {
+        if (!h) return '';
+        const f = fmtFecha(h);
+        return [f ? `<span style="color:#fff;">${esc(f)}</span>` : '', h.hora ? `<span style="color:${A.b};">${esc(h.hora)}</span>` : ''].filter(Boolean).join(`<span style="color:${P.tenue};"> · </span>`);
     }
 
     const siglas = (n) => {
@@ -229,7 +265,7 @@ B VS D`;
         const y0 = sup + HEAD + 6;
         const y1 = Hh - inf - FOOT - 6;
         const ba = y1 - y0 - 8;
-        const gp = Math.max(30, Math.min(alto ? 250 : 165, ba - 2 * ch - 24));
+        const gp = Math.max(30, Math.min(alto ? 250 : 165, ba - 2 * ch - 44));
         const Hb = 2 * ch + gp;
         const top = y0 + 8 + Math.max(0, (ba - Hb) / 2);
         const cA = top + ch / 2, cC = top + ch + gp + ch / 2, yc = (cA + cC) / 2;
@@ -283,7 +319,8 @@ B VS D`;
                     <span style="position:absolute; left:7px; font-family:${api.TITULAR}; font-size:13px; letter-spacing:0.05em; color:${A.b};">${esc(letra)}</span>VS
                 </div>
                 <div>${ladoHtml(q && q.b, o)}</div>
-            </div>`;
+            </div>
+            ${b.hor[letra] ? `<div style="position:absolute; left:${px(x)}; width:${QW}px; top:${px(ytop + ch + 5)}; text-align:center; font-family:${api.TEXTO}; font-weight:700; font-size:10.5px; letter-spacing:0.09em; line-height:1; white-space:nowrap;">${horarioHtml(b.hor[letra], A, P)}</div>` : ''}`;
         };
         const slot = (x, y, w, h, txt, col) => `<div style="position:absolute; left:${px(x)}; top:${px(y)}; width:${px(w)}; height:${px(h)}; border:1px solid ${col || P.borde}; background:${P.caja}; border-radius:3px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; text-align:center; font-family:${api.TEXTO}; font-weight:700; font-size:10px; letter-spacing:0.1em; color:${P.tenue}; line-height:1.1;">${txt}</div>`;
         const vsMini = (x, y, w, h) => `<div style="position:absolute; left:${px(x)}; top:${px(y)}; width:${px(w)}; height:${px(h)}; display:flex; align-items:center; justify-content:center; font-family:${api.TEXTO}; font-weight:700; font-size:9px; letter-spacing:0.2em; color:${P.tenue};">VS</div>`;
@@ -295,11 +332,12 @@ B VS D`;
         const cx0 = M + QW + g + SW + g;
         const sh = 24, shVs = 14, shT = sh * 2 + shVs;
 
-        const semiBox = (x, par, n) => `
+        const semiBox = (x, par, n, h) => `
             <div style="position:absolute; left:${px(x - 16)}; width:${SW + 32}px; top:${px(yc - shT / 2 - 15)}; text-align:center; font-family:${api.TEXTO}; font-weight:700; font-size:9.5px; letter-spacing:0.14em; color:${A.b}; white-space:nowrap;">SEMIFINAL ${n}</div>
             ${slot(x, yc - shT / 2, SW, sh, `GAN. ${esc(par[0])}`)}
             ${vsMini(x, yc - shT / 2 + sh, SW, shVs)}
-            ${slot(x, yc + shT / 2 - sh, SW, sh, `GAN. ${esc(par[1])}`)}`;
+            ${slot(x, yc + shT / 2 - sh, SW, sh, `GAN. ${esc(par[1])}`)}
+            ${h ? `<div style="position:absolute; left:${px(x - 16)}; width:${SW + 32}px; top:${px(yc + shT / 2 + 6)}; text-align:center; font-family:${api.TEXTO}; font-weight:700; font-size:10px; letter-spacing:0.08em; line-height:1.25; white-space:nowrap;"><div style="color:#fff;">${esc(fmtFecha(h))}</div><div style="color:${A.b};">${esc(h.hora || '')}</div></div>` : ''}`;
 
         const cruces = `
             ${tarjeta(semiIzq[0], xQI, top)}
@@ -308,8 +346,8 @@ B VS D`;
             ${tarjeta(semiDer[1], xQD, top + ch + gp)}
             ${hL(M + QW, cA, g / 2 + 1)}${hL(M + QW, cC, g / 2 + 1)}${vL(jI, cA, cC - cA)}${hL(jI, yc, g / 2)}${hL(xSI + SW, yc, g, A.b)}
             ${hL(jD, cA, g / 2 + 1)}${hL(jD, cC, g / 2 + 1)}${vL(jD, cA, cC - cA)}${hL(xSD + SW, yc, g / 2)}${hL(W - cx0, yc, g, A.b)}
-            ${semiBox(xSI, semiIzq, 1)}
-            ${semiBox(xSD, semiDer, 2)}`;
+            ${semiBox(xSI, semiIzq, 1, b.semisHor[0])}
+            ${semiBox(xSD, semiDer, 2, b.semisHor[1])}`;
 
         // ----- Final + copa -----
         const fh = 44, fw = (CW - 24) / 2;
@@ -326,6 +364,7 @@ B VS D`;
                 <div style="font-family:${api.TITULAR}; font-size:27px; line-height:1; letter-spacing:0.08em; color:#fff; white-space:nowrap;">LA FINAL</div>
                 <div style="width:28px; height:2px; background:${A.b}; margin:6px auto 5px;"></div>
                 <div style="font-family:${api.TEXTO}; font-weight:700; font-size:10.5px; letter-spacing:0.2em; color:${A.b}; text-transform:uppercase; white-space:nowrap;">${esc(b.copa ? `COPA DE ${b.copa}` : (b.cat || 'CAMPEÓN'))}</div>
+                ${b.final ? `<div style="margin-top:8px; font-family:${api.TEXTO}; font-weight:700; font-size:10.5px; letter-spacing:0.09em; line-height:1.25; white-space:nowrap;"><div style="color:#fff;">${esc(fmtFecha(b.final))}</div><div style="color:${A.b};">${esc(b.final.hora || '')}</div></div>` : ''}
             </div>`;
 
         // ----- Pie -----
