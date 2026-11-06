@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture de evento | Liga A.F.O.CH</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Bebas+Neue&family=Barlow+Condensed:wght@500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js"></script>
+<style>
+body{font-family:'Plus Jakarta Sans',sans-serif}
+.seccion{background:#fff;border:1px solid #e2e8f0;border-radius:1.25rem;padding:1rem}
+.seccion-titulo{font-size:.7rem;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:.14em;margin-bottom:.75rem}
+.campo-label{display:block;font-size:.7rem;font-weight:800;color:#334155;margin-bottom:.3rem}
+.campo-ayuda{font-size:.65rem;font-weight:600;color:#94a3b8;margin-top:.25rem;line-height:1.35}
+.campo{width:100%;border:1px solid #e2e8f0;border-radius:.75rem;padding:.55rem .75rem;font-size:.85rem;font-weight:600;color:#0f172a;background:#f8fafc;outline:none}
+.campo:focus{border-color:#0673C8;background:#fff}
+#in-texto{font-family:ui-monospace,Menlo,monospace;font-size:.76rem;font-weight:500;white-space:pre;overflow:auto}
+.liga-card{display:flex;align-items:center;gap:.6rem;border:1px solid #e2e8f0;border-radius:.9rem;padding:.45rem;background:#fff}.up{width:3rem;height:3rem;flex-shrink:0;border:2px dashed #cbd5e1;border-radius:.75rem;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#94a3b8;font-weight:800;background:#334155;overflow:hidden}.up img{max-width:88%;max-height:88%;object-fit:contain}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.7rem 1.3rem;border-radius:9999px;background:#0673C8;color:#fff;font-size:.82rem;font-weight:800;cursor:pointer}
+.btn:disabled{opacity:.55}
+.btn-sec{font-size:.72rem;font-weight:800;color:#475569;padding:.5rem .9rem;border-radius:9999px;border:1px solid #cbd5e1;background:#fff;cursor:pointer}
+</style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-900">
+<header style="background:linear-gradient(110deg,#0673C8,#35A7EA)" class="text-white">
+  <div class="max-w-6xl mx-auto px-4 py-4">
+    <h1 class="text-lg font-extrabold italic uppercase leading-none">Fixture de evento</h1>
+    <p class="text-[.7rem] font-semibold text-sky-100 mt-1">Liga A.F.O.CH · cronograma del torneo con partidos, acto inaugural y premiación</p>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-5 grid gap-5 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] items-start">
+  <div class="flex flex-col gap-4">
+    <section class="seccion">
+      <h2 class="seccion-titulo">Cronograma</h2>
+      <textarea id="in-texto" class="campo" rows="14" spellcheck="false" wrap="off"></textarea>
+      <p class="campo-ayuda">Un renglón sin hora es un <b>día</b> (barra de color). Cada renglón con hora es <b>HH:MM | texto</b>. Si empieza con <b>*</b> se destaca como banner (acto, premiación, almuerzo). Si ponés <b>Equipo A vs Equipo B</b> sale con VS.</p>
+    </section>
+    <section class="seccion">
+      <h2 class="seccion-titulo">Encabezado</h2>
+      <div class="flex flex-col gap-3">
+        <div><label class="campo-label" for="in-etiqueta">Línea chica</label><input id="in-etiqueta" class="campo" maxlength="40"></div>
+        <div><label class="campo-label" for="in-titulo">Título (un renglón por línea)</label><textarea id="in-titulo" class="campo" rows="2"></textarea></div>
+        <div><label class="campo-label" for="in-sub">Subtítulo</label><input id="in-sub" class="campo" maxlength="60"></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="campo-label" for="in-sede">Sede</label><input id="in-sede" class="campo" maxlength="40"></div>
+          <div><label class="campo-label" for="in-fecha">Fecha</label><input id="in-fecha" class="campo" maxlength="40"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="campo-label" for="in-entrada">Valor de entradas</label><input id="in-entrada" class="campo" maxlength="20"></div>
+          <div><label class="campo-label" for="in-pie">Texto del pie</label><input id="in-pie" class="campo" maxlength="40"></div>
+        </div>
+        <div><label class="campo-label" for="in-nota">Aviso destacado (opcional)</label><input id="in-nota" class="campo" maxlength="90" placeholder="Ej: El sorteo se realiza a las 8:00 hs"></div>
+      </div>
+    </section>
+    <section class="seccion">
+      <div class="flex items-center justify-between mb-3"><h2 class="seccion-titulo !mb-0">Ligas participantes</h2>
+        <label class="flex items-center gap-2 text-xs font-bold text-slate-700"><input id="chk-ligas" type="checkbox"> Mostrar</label></div>
+      <div id="lista-ligas" class="flex flex-col gap-2"></div>
+      <p class="campo-ayuda">Tocá el cuadro de cada liga para subir su escudo (PNG con fondo transparente, mejor si es blanco o claro sobre el violeta). Se guardan en este navegador.</p>
+    </section>
+    <section class="seccion">
+      <div class="flex items-center justify-between mb-3"><h2 class="seccion-titulo !mb-0">Invita</h2>
+        <label class="flex items-center gap-2 text-xs font-bold text-slate-700"><input id="chk-invita" type="checkbox"> Mostrar</label></div>
+      <div id="lista-invita" class="flex flex-col gap-2"></div>
+      <button id="btn-inv-mas" type="button" class="btn-sec mt-2">+ Agregar</button>
+      <p class="campo-ayuda">Subí el logo de cada auspiciante u organizador. Si falta el logo, se muestra el nombre escrito.</p>
+    </section>
+    <section class="seccion">
+      <div class="flex items-center justify-between gap-3"><h2 class="seccion-titulo !mb-0">Logo de cabecera</h2>
+        <div class="flex gap-2"><label class="btn-sec cursor-pointer">Subir<input id="in-logo-cab" type="file" accept="image/*" class="hidden"></label><button id="btn-logo-cab-q" type="button" class="btn-sec">Quitar</button></div></div>
+      <p class="campo-ayuda">Por defecto usa el logo de A.F.O.CH. Podés subir el escudo de la Federación para esta pieza.</p>
+    </section>
+    <section class="seccion">
+      <h2 class="seccion-titulo">Estilo</h2>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="campo-label" for="sel-diseno">Diseño</label><select id="sel-diseno" class="campo"></select></div>
+        <div><label class="campo-label" for="sel-formato">Formato</label><select id="sel-formato" class="campo"><option value="a4">Flyer A4 1080×1528</option><option value="vertical">Post vertical 1080×1350</option><option value="historia">Historia 1080×1920</option></select></div>
+      </div>
+      <p class="campo-ayuda">Los mismos diseños de tu generador. El logo se toma del que subiste en la pestaña Flyers (o <code>afoch-logo.png</code>).</p>
+    </section>
+  </div>
+  <div class="flex flex-col gap-4 min-w-0">
+    <div class="flex justify-end"><button id="btn-desc" class="btn" type="button">Descargar PNG</button></div>
+    <div id="preview" class="flex justify-center bg-slate-50 rounded-2xl border border-slate-200 p-5"></div>
+  </div>
+</main>
+<div id="export" style="position:fixed;left:-20000px;top:0;pointer-events:none" aria-hidden="true"></div>
+
+<script src="fuentes-liga.js"></script>
+<script>
+const BASE_COLORES = {
+    celeste:      '#35A7EA',   // acento principal (barras, chips de hora)
+    celesteClaro: '#7CC4F2',   // segundo tono del degradé
+    celesteSuave: '#BFE3F8',   // líneas y bordes suaves
+    celesteFondo: '#F0F8FE',   // fondo de filas alternas
+    azul:         '#0673C8',
+    tinta:        '#0B3A66',   // color del texto principal
+    fondo:        '#FFFFFF',   // fondo del flyer
+    cabA: '#35A7EA', cabB: '#7CC4F2', cabBorde: '#BFE3F8',   // cabecera
+    pieA: '#7CC4F2', pieB: '#35A7EA', pieBorde: '#BFE3F8',   // barra inferior
+    cabTexto: '#FFFFFF', sombraTitulo: 'rgba(6,115,200,0.45)',
+    catTexto: '#FFFFFF', catSombra: '#0673C8',
+    chipTexto: '#FFFFFF', chipBg: '#FFFFFF', acento: '#0673C8',
+    logoSombra: 'rgba(6,115,200,0.35)', logoTexto: '#0673C8',
+    marca: '#35A7EA',
+};
+
+// Diseños disponibles. Además de los colores, cambian la forma de la cabecera
+// ('diagonal' | 'recta' | 'curva'), de la barra de categoría ('inclinada' | 'plana' | 'pildora'), de las filas ('cinta' | 'linea' | 'tarjeta')
+// y de los chips de hora ('pildora' = redondeados).
+const DISENOS = {
+    clasico: { label: 'Celeste clásico', sub: 'Blanco y celeste',
+        cab: 'diagonal', cat: 'inclinada', fila: 'cinta', marca: true, colores: {} },
+    noche: { label: 'Noche neón', sub: 'Fondo oscuro y cian',
+        cab: 'diagonal', cat: 'inclinada', fila: 'cinta', marca: true,
+        colores: {
+            fondo: '#0A1626', tinta: '#E8F3FF', celeste: '#22D3EE', celesteClaro: '#67E8F9',
+            celesteSuave: '#1F4062', celesteFondo: '#10243A', azul: '#0E7490', acento: '#67E8F9',
+            chipBg: '#0F2A44', chipTexto: '#04141F', catTexto: '#04141F', catSombra: '#0E7490',
+            cabA: '#14406E', cabB: '#0B2A4A', cabBorde: '#22D3EE', pieA: '#0B2A4A', pieB: '#14406E', pieBorde: '#22D3EE',
+            sombraTitulo: 'rgba(34,211,238,0.55)', logoSombra: 'rgba(34,211,238,0.45)', logoTexto: '#0E7490', marca: '#22D3EE',
+        } },
+    cancha: { label: 'Verde cancha', sub: 'Verde y blanco',
+        cab: 'recta', cat: 'plana', fila: 'cinta', marca: true,
+        colores: {
+            fondo: '#F4FAF2', tinta: '#0F3D1E', celeste: '#1E9E4A', celesteClaro: '#4CC26E',
+            celesteSuave: '#BFE6C9', celesteFondo: '#E6F4E8', azul: '#14703A', acento: '#14703A',
+            cabA: '#14703A', cabB: '#2FAE5A', cabBorde: '#BFE6C9', pieA: '#2FAE5A', pieB: '#14703A', pieBorde: '#BFE6C9',
+            sombraTitulo: 'rgba(10,70,30,0.5)', catSombra: '#14703A', logoSombra: 'rgba(20,112,58,0.35)', logoTexto: '#14703A', marca: '#1E9E4A',
+        } },
+    fuego: { label: 'Rojo y negro', sub: 'Fuerte, estilo clásico de fútbol',
+        cab: 'recta', cat: 'inclinada', fila: 'linea', marca: false,
+        colores: {
+            fondo: '#FFFFFF', tinta: '#111111', celeste: '#D62828', celesteClaro: '#F25C54',
+            celesteSuave: '#F0B9B6', celesteFondo: '#FBEDEC', azul: '#B01E1E', acento: '#B01E1E',
+            cabA: '#111111', cabB: '#2B2B2B', cabBorde: '#D62828', pieA: '#2B2B2B', pieB: '#111111', pieBorde: '#D62828',
+            sombraTitulo: 'rgba(214,40,40,0.85)', catSombra: '#111111', logoSombra: 'rgba(214,40,40,0.5)', logoTexto: '#B01E1E', marca: '#D62828',
+        } },
+    limpio: { label: 'Minimal', sub: 'Negro, blanco y un detalle dorado',
+        cab: 'recta', cat: 'plana', fila: 'linea', marca: false,
+        colores: {
+            fondo: '#FFFFFF', tinta: '#18181B', celeste: '#18181B', celesteClaro: '#3F3F46',
+            celesteSuave: '#D4D4D8', celesteFondo: '#F4F4F5', azul: '#18181B', acento: '#18181B',
+            cabA: '#18181B', cabB: '#27272A', cabBorde: '#F5B700', pieA: '#27272A', pieB: '#18181B', pieBorde: '#F5B700',
+            sombraTitulo: 'rgba(0,0,0,0)', catSombra: 'rgba(0,0,0,0)', logoSombra: 'rgba(245,183,0,0.7)', logoTexto: '#18181B', marca: '#18181B',
+        } },
+    gala: { label: 'Azul y dorado', sub: 'Elegante, para finales y eventos',
+        cab: 'diagonal', cat: 'inclinada', fila: 'cinta', marca: true,
+        colores: {
+            fondo: '#FFFDF6', tinta: '#0A2540', celeste: '#C9A227', celesteClaro: '#E6C65A',
+            celesteSuave: '#EBDDA8', celesteFondo: '#FBF5DF', azul: '#0A2540', acento: '#0A2540',
+            chipTexto: '#0A2540', catTexto: '#0A2540', catSombra: '#0A2540',
+            cabA: '#0A2540', cabB: '#16406B', cabBorde: '#C9A227', pieA: '#16406B', pieB: '#0A2540', pieBorde: '#C9A227',
+            sombraTitulo: 'rgba(0,0,0,0.5)', logoSombra: 'rgba(201,162,39,0.6)', logoTexto: '#0A2540', marca: '#C9A227',
+        } },
+    // ---- Diseños modernos: cabecera curva, categorías en píldora, partidos en tarjetas ----
+    aurora: { label: 'Aurora', sub: 'Violeta y fucsia sobre oscuro',
+        cab: 'curva', cat: 'pildora', fila: 'tarjeta', chip: 'pildora', marca: false,
+        colores: {
+            fondo: '#0F0A24', tinta: '#F3EEFF', celeste: '#8B5CF6', celesteClaro: '#D946EF',
+            celesteSuave: '#3A2D75', celesteFondo: '#1B1342', azul: '#A78BFA', acento: '#C4B5FD',
+            chipBg: '#1B1342', chipTexto: '#FFFFFF', catTexto: '#FFFFFF', catSombra: 'rgba(0,0,0,0)',
+            cabA: '#5B21B6', cabB: '#C026D3', cabBorde: '#D946EF', pieA: '#C026D3', pieB: '#5B21B6', pieBorde: '#8B5CF6',
+            sombraTitulo: 'rgba(0,0,0,0)', logoSombra: 'rgba(217,70,239,0.5)', logoTexto: '#5B21B6', marca: '#8B5CF6',
+        } },
+    grafito: { label: 'Grafito y lima', sub: 'Oscuro con acento lima',
+        cab: 'recta', cat: 'plana', fila: 'tarjeta', chip: 'pildora', marca: false,
+        colores: {
+            fondo: '#101114', tinta: '#F4F5F7', celeste: '#A3E635', celesteClaro: '#D9F99D',
+            celesteSuave: '#2F3239', celesteFondo: '#1A1C21', azul: '#A3E635', acento: '#BEF264',
+            chipBg: '#1A1C21', chipTexto: '#101114', catTexto: '#101114', catSombra: 'rgba(0,0,0,0)',
+            cabA: '#1B1D22', cabB: '#2A2D34', cabBorde: '#A3E635', pieA: '#2A2D34', pieB: '#1B1D22', pieBorde: '#A3E635',
+            sombraTitulo: 'rgba(0,0,0,0)', logoSombra: 'rgba(163,230,53,0.6)', logoTexto: '#101114', marca: '#A3E635',
+        } },
+    menta: { label: 'Menta', sub: 'Verde agua, fresco y limpio',
+        cab: 'curva', cat: 'pildora', fila: 'tarjeta', chip: 'pildora', marca: false,
+        colores: {
+            fondo: '#F5FBFA', tinta: '#0A2A27', celeste: '#14B8A6', celesteClaro: '#5EEAD4',
+            celesteSuave: '#BFEDE6', celesteFondo: '#E8F7F4', azul: '#0F766E', acento: '#0F766E',
+            chipTexto: '#042F2C', catTexto: '#042F2C', catSombra: 'rgba(0,0,0,0)',
+            cabA: '#0F766E', cabB: '#14B8A6', cabBorde: '#5EEAD4', pieA: '#14B8A6', pieB: '#0F766E', pieBorde: '#5EEAD4',
+            sombraTitulo: 'rgba(0,0,0,0)', logoSombra: 'rgba(15,118,110,0.35)', logoTexto: '#0F766E', marca: '#14B8A6',
+        } },
+    atardecer: { label: 'Atardecer', sub: 'Naranja y rosa, cálido',
+        cab: 'curva', cat: 'pildora', fila: 'linea', chip: 'pildora', marca: false,
+        colores: {
+            fondo: '#FFF9F5', tinta: '#3B1420', celeste: '#F97316', celesteClaro: '#FB7185',
+            celesteSuave: '#FFD9C7', celesteFondo: '#FFF0E8', azul: '#E11D48', acento: '#C2410C',
+            chipTexto: '#2B0B14', catTexto: '#2B0B14', catSombra: 'rgba(0,0,0,0)',
+            cabA: '#EA580C', cabB: '#DB2777', cabBorde: '#FDBA74', pieA: '#DB2777', pieB: '#EA580C', pieBorde: '#FDBA74',
+            sombraTitulo: 'rgba(80,10,30,0.35)', logoSombra: 'rgba(219,39,119,0.35)', logoTexto: '#C2410C', marca: '#F97316',
+        } },
+    electrico: { label: 'Azul eléctrico', sub: 'Azul intenso, estilo deportivo',
+        cab: 'recta', cat: 'pildora', fila: 'tarjeta', chip: 'pildora', marca: false,
+        colores: {
+            fondo: '#F6F8FF', tinta: '#0B1640', celeste: '#2563EB', celesteClaro: '#60A5FA',
+            celesteSuave: '#C7D7FE', celesteFondo: '#EAF0FF', azul: '#1D4ED8', acento: '#1D4ED8',
+            chipTexto: '#FFFFFF', catTexto: '#FFFFFF', catSombra: 'rgba(0,0,0,0)',
+            cabA: '#1E3A8A', cabB: '#2563EB', cabBorde: '#93C5FD', pieA: '#2563EB', pieB: '#1E3A8A', pieBorde: '#93C5FD',
+            sombraTitulo: 'rgba(0,0,0,0)', logoSombra: 'rgba(37,99,235,0.35)', logoTexto: '#1D4ED8', marca: '#2563EB',
+        } },
+};
+const COLOR = { ...BASE_COLORES };
+let TEMA = DISENOS.clasico;
+// Deja activo el diseño `id` (pisa COLOR y TEMA). Se llama al armar cada flyer.
+function aplicarDiseno(id) {
+    TEMA = DISENOS[id] || DISENOS.clasico;
+    Object.assign(COLOR, BASE_COLORES, TEMA.colores);
+    return TEMA;
+}
+
+// Diseño oficial del Federativo (violeta y amarillo), además de los de tu generador
+DISENOS.federativo = { label: 'Federativo (violeta y amarillo)', sub: 'Flyer oficial', cab: 'recta', cat: 'plana', fila: 'tarjeta', chip: 'pildora', marca: false, espTexto: '#2A0A5E',
+  colores: { fondo: '#4B1A94', tinta: '#FFFFFF', celeste: '#E9F000', celesteClaro: '#F6FA5C', celesteSuave: '#7C4DBF', celesteFondo: '#5A27A8', azul: '#E9F000', acento: '#E9F000',
+    chipBg: '#4B1A94', chipTexto: '#2A0A5E', catTexto: '#2A0A5E', catSombra: 'rgba(0,0,0,0)', cabA: '#5B1FA8', cabB: '#3F1580', cabBorde: '#E9F000', pieA: '#3F1580', pieB: '#2F0F66', pieBorde: '#E9F000',
+    cabTexto: '#E9F000', sombraTitulo: 'rgba(0,0,0,0.3)', logoSombra: 'rgba(233,240,0,0.7)', logoTexto: '#4B1A94', marca: '#E9F000' } };
+
+const FORMATOS = { a4: { ancho: 540, alto: 764 }, vertical: { ancho: 540, alto: 675 }, historia: { ancho: 540, alto: 960 } };
+const CLAVE = 'afoch_fixture_evento_v2';
+const TEXTO_INI = `Sábado 7/11
+16:30 | Primer partido
+18:00 | Segundo partido
+*20:30 | Acto inaugural
+Domingo 8/11
+09:00 | Tercer partido
+10:30 | Cuarto partido
+16:30 | Quinto partido
+18:00 | Sexto partido
+*19:30 | Entrega de premios`;
+const INI = { texto: TEXTO_INI, etiqueta: 'TORNEO DE SELECCIONES', titulo: 'FEDERATIVO', sub: 'SUB 15', sede: 'Avenida FC', fecha: '7 y 8 de noviembre', entrada: '$ 5.000', pie: '', nota: '',
+  diseno: 'federativo', formato: 'a4', verLigas: true, verInvita: true, logoCab: '',
+  ligas: [{ nombre: 'Liga AFOCH', escudo: '' }, { nombre: 'Liga Nordoeste', escudo: '' }, { nombre: 'Liga Quitilipense', escudo: '' }, { nombre: 'Liga Saenzpeñense', escudo: '' }],
+  invita: [{ nombre: 'MVM', logo: '' }, { nombre: 'Villa Ángela', logo: '' }] };
+let e = JSON.parse(JSON.stringify(INI));
+try { e = { ...e, ...JSON.parse(localStorage.getItem(CLAVE) || '{}') }; } catch (_) {}
+if (!DISENOS[e.diseno]) e.diseno = 'federativo';
+if (!FORMATOS[e.formato]) e.formato = 'a4';
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+const px = (n) => Math.round(n * 100) / 100 + 'px';
+const ajustar = (txt, base, max, f = 0.46) => Math.min(base, max / (Math.max(String(txt).length, 1) * f));
+
+function logoActual() {
+  if (e.logoCab) return e.logoCab;
+  try { const g = JSON.parse(localStorage.getItem('afoch_flyers_estado_v1') || 'null'); if (g && g.logoSubido) return g.logoSubido; } catch (_) {}
+  return 'afoch-logo.png';
+}
+function leerImagen(file, max = 260) {
+  return new Promise((ok, mal) => {
+    const r = new FileReader();
+    r.onerror = mal;
+    r.onload = () => { const im = new Image(); im.onerror = mal; im.onload = () => {
+      const k = Math.min(1, max / Math.max(im.width, im.height)); const c = document.createElement('canvas');
+      c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); ok(c.toDataURL('image/png')); };
+      im.src = r.result; };
+    r.readAsDataURL(file);
+  });
+}
+
+function parsear(texto) {
+  const dias = []; let cur = null;
+  for (let raw of String(texto).split(/\r?\n/)) {
+    let l = raw.trim(); if (!l) continue;
+    const m = l.match(/^(\*)?\s*(\d{1,2})\s*[:.]\s*(\d{2})\s*(?:hs?\.?)?\s*[|\-–—]\s*(.+)$/i);
+    if (m) {
+      if (!cur) { cur = { dia: '', filas: [] }; dias.push(cur); }
+      let txt = m[4].trim(); const esp = !!m[1] || txt.startsWith('*'); txt = txt.replace(/^\*\s*/, '');
+      const vs = txt.split(/\s+vs\.?\s+/i);
+      cur.filas.push({ hora: `${String(m[2]).padStart(2, '0')}:${m[3]}`, esp, txt, vs: vs.length === 2 ? vs : null });
+    } else { cur = { dia: l.replace(/^\*+|\*+$/g, '').trim(), filas: [] }; dias.push(cur); }
+  }
+  return dias.filter(d => d.filas.length || d.dia);
+}
+
+function html(c) {
+  aplicarDiseno(c.diseno);
+  const f = FORMATOS[c.formato] || FORMATOS.a4;
+  const T = "'Bebas Neue','Oswald','Arial Narrow',sans-serif", B = "'Barlow Condensed','Arial Narrow',sans-serif";
+  const recta = TEMA.cab !== 'diagonal', curva = TEMA.cab === 'curva';
+  const alto = f.alto, M = 24, alta = alto > 900;
+  const ligas = c.verLigas ? c.ligas.filter(l => l.nombre || l.escudo) : [];
+  const inv = c.verInvita ? c.invita.filter(x => x.nombre || x.logo) : [];
+  const CAB = alta ? 170 : 128, seg = alta ? 50 : 0, segI = alta ? 70 : 0;
+  const PIE = inv.length ? 96 : 44;
+  const dias = parsear(c.texto);
+  const lineas = (c.titulo || '').split('\n').map(s => s.trim()).filter(Boolean);
+  const tLogo = 80;
+  const anchoTit = f.ancho - (M + tLogo + 16) - M;
+  const tamTit = Math.min(lineas.length > 1 ? 46 : 58, anchoTit / (Math.max(...lineas.map(s => s.length), 1) * 0.43));
+  const redCab = curva ? 'border-radius:0 0 30px 30px;' : '', redPie = curva ? 'border-radius:30px 30px 0 0;' : '';
+  const clipC = recta ? 'none' : 'polygon(0 0,100% 0,100% calc(100% - 16px),0 100%)';
+  const clipCb = recta ? 'none' : 'polygon(0 0,100% 0,100% calc(100% - 4px),0 100%)';
+  const clipP = recta ? 'none' : 'polygon(0 14px,100% 0,100% 100%,0 100%)';
+  const clipPb = recta ? 'none' : 'polygon(0 12px,100% 2px,100% 100%,0 100%)';
+  const logo = logoActual();
+  const logoH = `<div style="width:${tLogo}px;height:${tLogo}px;border-radius:${TEMA.chip === 'pildora' ? '20px' : '9999px'};background:${TEMA === DISENOS.federativo ? COLOR.celeste : '#fff'};display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 3px 0 ${COLOR.logoSombra}"><img src="${logo}" alt="" style="max-width:64px;max-height:64px;object-fit:contain" onerror="this.style.display='none'"></div>`;
+
+  const chip = (ico, txt) => `<div style="flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;font-family:${B};font-weight:800;font-size:14px;letter-spacing:.04em;color:${COLOR.tinta};text-transform:uppercase;white-space:nowrap">${ico}<span style="overflow:hidden;text-overflow:ellipsis">${esc(txt)}</span></div>`;
+  const pin = `<svg width="10" height="13" viewBox="0 0 24 30"><path fill-rule="evenodd" fill="${COLOR.acento}" d="M12 0C5.4 0 0 5.2 0 11.7 0 20 12 30 12 30s12-10 12-18.3C24 5.2 18.6 0 12 0zM12 16.5a4.8 4.8 0 100-9.6 4.8 4.8 0 000 9.6z"/></svg>`;
+  const cal = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${COLOR.acento}" stroke-width="2.4"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>`;
+  const tic = `<svg width="15" height="12" viewBox="0 0 24 18" fill="none" stroke="${COLOR.acento}" stroke-width="2.4"><path d="M2 5v8h20V5a3 3 0 01-3-3H5a3 3 0 01-3 3z"/><path d="M15 2v14" stroke-dasharray="2 2.4"/></svg>`;
+  const strip = [c.sede && chip(pin, 'Sede: ' + c.sede), c.fecha && chip(cal, c.fecha), c.entrada && chip(tic, 'Entrada: ' + c.entrada)].filter(Boolean).join('');
+
+  const nota = (c.nota || '').trim();
+  const notaH = nota ? `<div style="flex:none;margin:0 ${M}px 8px;border:2px solid ${COLOR.celeste};background:${COLOR.celesteFondo};border-radius:6px;padding:6px 12px;text-align:center;font-family:${B};font-weight:800;font-size:${px(ajustar(nota, 18, f.ancho - M * 2 - 30, 0.46))};line-height:1.1;color:${COLOR.acento};text-transform:uppercase;letter-spacing:.03em">${esc(nota)}</div>` : '';
+
+  const espTxt = TEMA.espTexto || '#fff';
+  const cuerpo = dias.map(d => {
+    const banda = d.dia ? `<div style="flex:none;height:32px;background:linear-gradient(90deg,${COLOR.celeste},${COLOR.celesteClaro});${TEMA.cat === 'pildora' ? 'border-radius:9999px;' : 'border-radius:3px;'}display:flex;align-items:center;padding:0 16px"><span style="font-family:${T};font-size:22px;line-height:1;letter-spacing:.05em;color:${COLOR.catTexto};text-transform:uppercase;white-space:nowrap">${esc(d.dia)}</span></div>` : '';
+    const filas = d.filas.map((r, k) => {
+      const chipH = `<span style="display:block;width:66px;flex:none;text-align:center;background:${r.esp ? COLOR.acento : COLOR.celeste};color:${r.esp ? espTxt : COLOR.chipTexto};font-family:${T};font-size:20px;line-height:1;padding:5px 0 4px;border-radius:${TEMA.chip === 'pildora' ? '9999px' : '4px'};letter-spacing:.04em">${r.hora}</span>`;
+      if (r.esp) return `<div style="flex:1 1 0;max-height:52px;min-height:28px;border:2px solid ${COLOR.celeste};background:${COLOR.celesteFondo};border-radius:8px;display:flex;align-items:center;gap:14px;padding:0 12px;box-sizing:border-box">${chipH}<span style="flex:1;text-align:center;font-family:${T};font-size:${px(ajustar(r.txt, 26, f.ancho - M * 2 - 130, 0.44))};line-height:1;letter-spacing:.07em;color:${COLOR.acento};text-transform:uppercase;white-space:nowrap">${esc(r.txt)}</span></div>`;
+      const centro = r.vs
+        ? `<span style="flex:1;text-align:right;font-family:${B};font-weight:800;font-size:21px;color:${COLOR.tinta};text-transform:uppercase;white-space:nowrap">${esc(r.vs[0])}</span><span style="font-family:${T};font-size:13px;color:${COLOR.acento};background:${COLOR.chipBg};border:1.5px solid ${COLOR.celesteSuave};border-radius:9999px;padding:3px 8px 2px">VS</span><span style="flex:1;font-family:${B};font-weight:800;font-size:21px;color:${COLOR.tinta};text-transform:uppercase;white-space:nowrap">${esc(r.vs[1])}</span>`
+        : `<span style="flex:1;font-family:${B};font-weight:800;font-size:${px(ajustar(r.txt, 24, f.ancho - M * 2 - 120, 0.46))};letter-spacing:.04em;color:${COLOR.tinta};text-transform:uppercase;white-space:nowrap">${esc(r.txt)}</span>`;
+      const fondo = k % 2 === 0 ? COLOR.celesteFondo : 'transparent';
+      return `<div style="flex:1 1 0;max-height:48px;min-height:26px;background:${fondo};border-radius:6px;border-bottom:1px solid ${COLOR.celesteSuave};display:flex;align-items:center;gap:14px;padding:0 10px;box-sizing:border-box">${chipH}${centro}</div>`;
+    }).join('');
+    return `<div style="flex:${Math.max(d.filas.length, 1)} 1 0;display:flex;flex-direction:column;gap:5px;min-height:0">${banda}${filas}</div>`;
+  }).join('<div style="flex:none;height:8px"></div>');
+
+  const colW = ligas.length ? (f.ancho - M * 2) / Math.min(ligas.length, 4) : 0;
+  const ligasH = ligas.length ? `<div style="flex:none;margin:0 ${M}px 10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="width:8px;height:8px;background:${COLOR.celeste};transform:rotate(45deg)"></span><span style="font-family:${B};font-weight:800;font-size:14px;letter-spacing:.12em;color:${COLOR.tinta};text-transform:uppercase;white-space:nowrap">Ligas participantes</span><span style="flex:1;height:2px;background:${COLOR.celesteSuave}"></span></div>
+      <div style="display:grid;grid-template-columns:repeat(${Math.min(ligas.length, 4)},1fr);row-gap:8px">${ligas.map(l => `<div style="display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0">
+        <div style="width:58px;height:58px;border-radius:9999px;background:${COLOR.cabA};border:2px solid ${COLOR.cabBorde};display:flex;align-items:center;justify-content:center;overflow:hidden">${l.escudo ? `<img src="${l.escudo}" alt="" style="max-width:80%;max-height:80%;object-fit:contain">` : `<span style="font-family:${T};font-size:20px;color:${COLOR.cabTexto};opacity:.7">${esc((l.nombre || '?').replace(/^liga\s+/i, '').slice(0, 2).toUpperCase())}</span>`}</div>
+        <span style="font-family:${B};font-weight:800;font-size:${px(ajustar(l.nombre, 14, colW - 8, 0.47))};line-height:1;color:${COLOR.tinta};text-transform:uppercase;letter-spacing:.03em;white-space:nowrap">${esc(l.nombre)}</span></div>`).join('')}</div></div>` : '';
+
+  const invH = inv.length ? `<div style="font-family:${B};font-weight:700;font-size:12px;letter-spacing:.32em;color:${COLOR.cabTexto};opacity:.9;text-transform:uppercase;margin-bottom:6px">Invita</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:30px;height:38px">${inv.map(x => x.logo ? `<img src="${x.logo}" alt="${esc(x.nombre)}" style="max-height:38px;max-width:${Math.floor((f.ancho - M * 2 - 30 * (inv.length - 1)) / inv.length)}px;object-fit:contain">` : `<span style="font-family:${T};font-size:26px;letter-spacing:.05em;color:${COLOR.cabTexto};text-transform:uppercase;white-space:nowrap">${esc(x.nombre)}</span>`).join('')}</div>` : '';
+  const pieTxt = (c.pie || '').trim();
+
+  return `<div style="position:relative;width:${f.ancho}px;height:${alto}px;background:${COLOR.fondo};overflow:hidden;font-family:${B};display:flex;flex-direction:column">
+    <div style="position:absolute;left:0;top:0;width:100%;height:${CAB + seg + 10}px;background:${COLOR.cabBorde};${redCab}clip-path:${clipCb}"></div>
+    <div style="position:absolute;left:0;top:0;width:100%;height:${CAB + seg}px;background:linear-gradient(110deg,${COLOR.cabA},${COLOR.cabB});${redCab}clip-path:${clipC}"></div>
+    <div style="position:absolute;left:${M}px;top:${seg + Math.round((CAB - 12 - tLogo) / 2)}px">${logoH}</div>
+    <div style="position:absolute;left:${M + tLogo + 16}px;top:${seg + 6}px;width:${anchoTit}px;height:${CAB - 24}px;display:flex;flex-direction:column;justify-content:center">
+      <div style="font-family:${B};font-weight:800;font-size:15px;letter-spacing:.16em;color:${COLOR.cabTexto};opacity:.85;text-transform:uppercase;margin-bottom:3px;white-space:nowrap">${esc(c.etiqueta)}</div>
+      <div style="font-family:${T};font-size:${px(tamTit)};line-height:.98;color:${COLOR.cabTexto};letter-spacing:.03em;text-shadow:2px 2px 0 ${COLOR.sombraTitulo};text-transform:uppercase">${lineas.map(esc).join('<br>')}</div>
+      ${c.sub ? `<div style="margin-top:4px;font-family:${B};font-weight:800;font-size:19px;letter-spacing:.1em;color:${COLOR.cabTexto};text-transform:uppercase">${esc(c.sub)}</div>` : ''}
+    </div>
+    <div style="flex:none;height:${CAB + seg + 10}px"></div>
+    ${strip ? `<div style="flex:none;margin:0 ${M}px 10px;height:32px;background:${COLOR.celesteFondo};border-bottom:2px solid ${COLOR.celeste};display:flex;align-items:center">${strip}</div>` : ''}
+    ${notaH}
+    <div style="flex:1 1 0;min-height:0;margin:0 ${M}px 10px;display:flex;flex-direction:column">${cuerpo}</div>
+    ${ligasH}
+    <div style="flex:none;position:relative;height:${PIE + segI + 8}px">
+      <div style="position:absolute;left:0;bottom:0;width:100%;height:${PIE + segI + 8 + 8}px;background:${COLOR.pieBorde};${redPie}clip-path:${clipPb}"></div>
+      <div style="position:absolute;left:0;bottom:0;width:100%;height:${PIE + segI + 8}px;background:linear-gradient(110deg,${COLOR.pieA},${COLOR.pieB});${redPie}clip-path:${clipP}"></div>
+      <div style="position:absolute;left:${M}px;right:${M}px;bottom:${segI}px;height:${PIE + 8}px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-top:8px;box-sizing:border-box">
+        ${invH}
+        ${pieTxt ? `<div style="margin-top:${inv.length ? 6 : 0}px;font-family:${B};font-weight:800;font-size:13px;letter-spacing:.14em;color:${COLOR.cabTexto};opacity:.9;text-transform:uppercase">${esc(pieTxt)}</div>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function render() {
+  const f = FORMATOS[e.formato] || FORMATOS.a4;
+  const h = html(e);
+  const k = Math.min(1, 440 / f.ancho);
+  $('preview').innerHTML = `<div style="width:${f.ancho * k}px;height:${f.alto * k}px" class="rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white"><div style="width:${f.ancho}px;height:${f.alto}px;transform:scale(${k});transform-origin:top left">${h}</div></div>`;
+  $('export').innerHTML = `<div style="width:${f.ancho}px;height:${f.alto}px">${h}</div>`;
+  try { localStorage.setItem(CLAVE, JSON.stringify(e)); } catch (_) {
+    try { const s = JSON.parse(JSON.stringify(e)); s.ligas.forEach(l => l.escudo = ''); s.invita.forEach(x => x.logo = ''); localStorage.setItem(CLAVE, JSON.stringify(s)); } catch (__) {}
+  }
+}
+
+function tarjeta(tipo, i, x) {
+  const img = tipo === 'liga' ? x.escudo : x.logo;
+  return `<div class="liga-card">
+    <label class="up" title="Subir imagen">${img ? `<img src="${img}" alt="">` : '+'}<input type="file" accept="image/*" class="hidden" data-up="${tipo}:${i}"></label>
+    <input class="campo !py-2 min-w-0 flex-1" data-nom="${tipo}:${i}" value="${esc(x.nombre)}" placeholder="Nombre" maxlength="40">
+    ${tipo === 'inv' ? `<button type="button" class="btn-sec" data-del="${i}">Quitar</button>` : ''}</div>`;
+}
+function paneles() {
+  $('lista-ligas').innerHTML = e.ligas.map((l, i) => tarjeta('liga', i, l)).join('');
+  $('lista-invita').innerHTML = e.invita.map((x, i) => tarjeta('inv', i, x)).join('');
+}
+document.addEventListener('input', (ev) => {
+  const n = ev.target.dataset && ev.target.dataset.nom; if (!n) return;
+  const [t, i] = n.split(':'); (t === 'liga' ? e.ligas : e.invita)[+i].nombre = ev.target.value; render();
+});
+document.addEventListener('change', async (ev) => {
+  const u = ev.target.dataset && ev.target.dataset.up; if (!u || !ev.target.files[0]) return;
+  const [t, i] = u.split(':');
+  try { const d = await leerImagen(ev.target.files[0]); if (t === 'liga') e.ligas[+i].escudo = d; else e.invita[+i].logo = d; paneles(); render(); }
+  catch (_) { alert('No se pudo leer esa imagen.'); }
+});
+document.addEventListener('click', (ev) => {
+  const d = ev.target.dataset && ev.target.dataset.del; if (d == null || d === '') return;
+  e.invita.splice(+d, 1); paneles(); render();
+});
+$('btn-inv-mas').addEventListener('click', () => { if (e.invita.length < 4) { e.invita.push({ nombre: '', logo: '' }); paneles(); render(); } });
+$('in-logo-cab').addEventListener('change', async (ev) => { if (ev.target.files[0]) { e.logoCab = await leerImagen(ev.target.files[0], 300); render(); } });
+$('btn-logo-cab-q').addEventListener('click', () => { e.logoCab = ''; render(); });
+$('chk-ligas').checked = !!e.verLigas; $('chk-ligas').addEventListener('change', () => { e.verLigas = $('chk-ligas').checked; render(); });
+$('chk-invita').checked = !!e.verInvita; $('chk-invita').addEventListener('change', () => { e.verInvita = $('chk-invita').checked; render(); });
+
+async function descargar() {
+  const b = $('btn-desc'); const lab = b.textContent; b.disabled = true; b.textContent = 'Generando…';
+  try {
+    if (document.fonts && document.fonts.ready) { await Promise.all(['400 24px "Bebas Neue"', '800 24px "Barlow Condensed"', '700 24px "Barlow Condensed"'].map(x => document.fonts.load(x).catch(() => null))); await document.fonts.ready; }
+    const f = FORMATOS[e.formato] || FORMATOS.a4;
+    const nodo = $('export').firstElementChild.firstElementChild;
+    const op = { pixelRatio: 1080 / f.ancho, backgroundColor: COLOR.fondo, style: { transform: 'none' }, cacheBust: true };
+    if (window.CSS_FUENTES_LIGA) op.fontEmbedCSS = window.CSS_FUENTES_LIGA;
+    await htmlToImage.toPng(nodo, { ...op, pixelRatio: 1 });
+    const url = await htmlToImage.toPng(nodo, op);
+    const a = document.createElement('a'); a.download = `afoch-fixture-${e.formato}.png`; a.href = url; document.body.appendChild(a); a.click(); a.remove();
+  } catch (err) { console.error(err); alert('No se pudo generar la imagen. Probá de nuevo.'); }
+  finally { b.disabled = false; b.textContent = lab; }
+}
+
+const campos = { 'in-texto': 'texto', 'in-etiqueta': 'etiqueta', 'in-titulo': 'titulo', 'in-sub': 'sub', 'in-sede': 'sede', 'in-fecha': 'fecha', 'in-entrada': 'entrada', 'in-pie': 'pie', 'in-nota': 'nota', 'sel-diseno': 'diseno', 'sel-formato': 'formato' };
+$('sel-diseno').innerHTML = Object.entries(DISENOS).map(([k, d]) => `<option value="${k}">${d.label}</option>`).join('');
+for (const [id, k] of Object.entries(campos)) { $(id).value = e[k]; $(id).addEventListener('input', () => { e[k] = $(id).value; render(); }); }
+$('btn-desc').addEventListener('click', descargar);
+paneles(); render();
+</script>
+</body>
+</html>
