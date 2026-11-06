@@ -215,6 +215,26 @@
                 </div>
                 <p class="campo-ayuda">También podés dejar <code class="font-bold">afoch-logo.png</code> en la misma carpeta que este archivo (abrilo desde tu sitio, no con doble clic desde el disco). Lo que subís acá se guarda en este navegador.</p>
             </section>
+            <section class="seccion" id="sec-pie-img">
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <h2 class="seccion-titulo !mb-0">Imágenes del pie</h2>
+                    <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
+                        <input id="chk-pie-img" type="checkbox" class="accent-liga"> Mostrar
+                    </label>
+                </div>
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                    <p id="pie-img-estado" class="text-[0.72rem] font-semibold text-slate-500"></p>
+                    <div class="flex gap-2">
+                        <label class="btn-sec cursor-pointer">
+                            Subir imágenes
+                            <input id="in-pie-img" type="file" accept="image/*" multiple class="hidden">
+                        </label>
+                        <button type="button" id="btn-pie-img-quitar" class="btn-sec hidden">Quitar todas</button>
+                    </div>
+                </div>
+                <div id="lista-pie-img" class="flex flex-wrap gap-3 mt-3"></div>
+                <p class="campo-ayuda">Podés subir varias a la vez (hasta 6). Salen juntas en el centro de la barra inferior de cada flyer, dentro de un mismo fondo blanco redondeado, en el orden en que las cargaste. Al activarlas, el pie se hace un poco más alto (entran algunos partidos menos por flyer). Se guardan en este navegador.</p>
+            </section>
             <section class="seccion" id="sec-escudos">
                 <div class="flex items-center justify-between gap-2 mb-3">
                     <h2 class="seccion-titulo !mb-0">Escudos de los equipos</h2>
