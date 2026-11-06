@@ -61,6 +61,23 @@ body{font-family:'Plus Jakarta Sans',sans-serif}
       <p class="campo-ayuda">Tocá el cuadro de cada liga para subir su escudo (PNG con fondo transparente, mejor si es blanco o claro sobre el violeta). Se guardan en este navegador.</p>
     </section>
     <section class="seccion">
+      <div class="flex items-center justify-between mb-3"><h2 class="seccion-titulo !mb-0">Equipos participantes <span id="eq-cuenta" class="text-slate-400 font-bold normal-case tracking-normal"></span></h2>
+        <label class="flex items-center gap-2 text-xs font-bold text-slate-700"><input id="chk-equipos" type="checkbox"> Mostrar</label></div>
+      <div id="lista-equipos" class="flex flex-col gap-2 max-h-[45vh] overflow-y-auto pr-1"></div>
+      <div class="flex flex-wrap gap-2 mt-3">
+        <button id="btn-eq-mas" type="button" class="btn-sec">+ Agregar equipo</button>
+        <label class="btn-sec cursor-pointer">Subir varios escudos<input id="in-eq-multi" type="file" accept="image/*" multiple class="hidden"></label>
+        <button id="btn-eq-limpiar" type="button" class="btn-sec">Borrar todos</button>
+      </div>
+      <details class="mt-3">
+        <summary class="text-[0.72rem] font-extrabold text-slate-600 cursor-pointer">Pegar una lista de nombres</summary>
+        <textarea id="in-eq-texto" class="campo mt-2" rows="5" spellcheck="false" placeholder="Club A&#10;Club B&#10;Club C"></textarea>
+        <button id="btn-eq-pegar" type="button" class="btn-sec mt-2">Agregar a la lista</button>
+        <p class="campo-ayuda">Un equipo por renglón. Después le podés subir el escudo a cada uno.</p>
+      </details>
+      <p class="campo-ayuda">No importa cuántos sean: con pocos equipos y escudos salen en una fila; con muchos se acomodan en varias filas y, sin escudos, como etiquetas con el nombre. En el formato A4 el flyer se alarga solo si hace falta lugar.</p>
+    </section>
+    <section class="seccion">
       <div class="flex items-center justify-between mb-3"><h2 class="seccion-titulo !mb-0">Invita</h2>
         <div class="flex items-center gap-3"><label class="flex items-center gap-2 text-xs font-bold text-slate-700"><input id="chk-inv-fondo" type="checkbox"> Fondo blanco</label><label class="flex items-center gap-2 text-xs font-bold text-slate-700"><input id="chk-invita" type="checkbox"> Mostrar</label></div></div>
       <div id="lista-invita" class="flex flex-col gap-2"></div>
@@ -76,7 +93,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif}
       <h2 class="seccion-titulo">Estilo</h2>
       <div class="grid grid-cols-2 gap-3">
         <div><label class="campo-label" for="sel-diseno">Diseño</label><select id="sel-diseno" class="campo"></select></div>
-        <div><label class="campo-label" for="sel-formato">Formato</label><select id="sel-formato" class="campo"><option value="a4">Flyer A4 1080×1528</option><option value="vertical">Post vertical 1080×1350</option><option value="historia">Historia 1080×1920</option></select></div>
+        <div><label class="campo-label" for="sel-formato">Formato</label><select id="sel-formato" class="campo"><option value="a4">Flyer A4 1080×1528 (se alarga si hace falta)</option><option value="vertical">Post vertical 1080×1350</option><option value="historia">Historia 1080×1920</option></select></div>
       </div>
       <p class="campo-ayuda">Los mismos diseños de tu generador. El logo se toma del que subiste en la pestaña Flyers (o <code>afoch-logo.png</code>).</p>
     </section>
@@ -230,7 +247,7 @@ Domingo 8/11
 18:00 | Sexto partido
 *19:30 | Entrega de premios`;
 const INI = { texto: TEXTO_INI, etiqueta: 'TORNEO DE SELECCIONES', titulo: 'FEDERATIVO', sub: 'SUB 15', sede: 'Avenida FC', fecha: '7 y 8 de noviembre', entrada: '$ 5.000', pie: '', nota: '',
-  diseno: 'federativo', formato: 'a4', verLigas: true, verInvita: true, invFondo: true, logoCab: '',
+  diseno: 'federativo', formato: 'a4', verLigas: true, verInvita: true, invFondo: true, logoCab: '', verEquipos: true, equipos: [],
   ligas: [{ nombre: 'Liga AFOCH', escudo: '' }, { nombre: 'Liga Nordoeste', escudo: '' }, { nombre: 'Liga Quitilipense', escudo: '' }, { nombre: 'Liga Saenzpeñense', escudo: '' }],
   invita: [{ nombre: 'MVM', logo: '' }, { nombre: 'Villa Ángela', logo: '' }] };
 let e = JSON.parse(JSON.stringify(INI));
@@ -304,12 +321,41 @@ function extraerDatos() {
   }
 }
 
+// Bloque "Equipos participantes": se adapta a la cantidad (escudos en filas, o etiquetas si no hay escudos)
+function bloqueEquipos(c, ancho, M) {
+  const lista = c.verEquipos === false ? [] : (c.equipos || []).filter(x => x.nombre || x.escudo);
+  if (!lista.length) return { h: 0, html: '' };
+  const T = "'Bebas Neue','Oswald','Arial Narrow',sans-serif", B = "'Barlow Condensed','Arial Narrow',sans-serif";
+  const W = ancho - M * 2, n = lista.length, hayEsc = lista.some(x => x.escudo);
+  const titulo = `<div style="display:flex;align-items:center;gap:8px;height:21px;margin-bottom:7px"><span style="width:8px;height:8px;background:${COLOR.celeste};transform:rotate(45deg)"></span><span style="font-family:${B};font-weight:800;font-size:14px;letter-spacing:.12em;color:${COLOR.tinta};text-transform:uppercase;white-space:nowrap">Equipos participantes</span><span style="flex:1;height:2px;background:${COLOR.celesteSuave}"></span></div>`;
+  let cuerpo, hCont;
+  if (hayEsc) {
+    const cols = n <= 4 ? n : n <= 8 ? 4 : n <= 15 ? 5 : 6, circ = cols <= 4 ? 44 : cols === 5 ? 38 : 34, rows = Math.ceil(n / cols);
+    hCont = rows * (circ + 4 + 28 + 8) - 8;
+    cuerpo = `<div style="display:flex;flex-wrap:wrap;justify-content:center;row-gap:8px">${lista.map(x => `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;width:${Math.floor(W / cols)}px;height:${circ + 4 + 28}px">
+      <div style="width:${circ}px;height:${circ}px;border-radius:9999px;background:${COLOR.cabA};border:2px solid ${COLOR.cabBorde};display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none">${x.escudo ? `<img src="${x.escudo}" alt="" style="max-width:80%;max-height:80%;object-fit:contain">` : `<span style="font-family:${T};font-size:${Math.round(circ * .4)}px;color:${COLOR.cabTexto};opacity:.7">${esc((x.nombre || '?').slice(0, 2).toUpperCase())}</span>`}</div>
+      <span style="font-family:${B};font-weight:800;font-size:12px;line-height:1.08;color:${COLOR.tinta};text-transform:uppercase;letter-spacing:.02em;text-align:center;max-height:28px;overflow:hidden;padding:0 3px">${esc(x.nombre)}</span></div>`).join('')}</div>`;
+  } else {
+    let rows = 1, usado = 0;
+    lista.forEach(x => { const w = Math.min(W, (x.nombre || '').length * 7.2 + 24); if (usado && usado + 6 + w > W) { rows++; usado = w; } else usado += (usado ? 6 : 0) + w; });
+    hCont = rows * 26 + (rows - 1) * 6;
+    cuerpo = `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px">${lista.map(x => `<span style="height:26px;display:inline-flex;align-items:center;padding:0 12px;border-radius:9999px;background:${COLOR.celesteFondo};border:1.5px solid ${COLOR.celesteSuave};font-family:${B};font-weight:800;font-size:14px;letter-spacing:.03em;color:${COLOR.tinta};text-transform:uppercase;white-space:nowrap">${esc(x.nombre)}</span>`).join('')}</div>`;
+  }
+  return { h: 28 + hCont + 10, html: `<div style="flex:none;margin:0 ${M}px 10px">${titulo}${cuerpo}</div>` };
+}
+// Medidas del flyer: el formato A4 se alarga lo necesario para que entren los equipos
+function medidas(c) {
+  const f = FORMATOS[c.formato] || FORMATOS.a4;
+  const extra = c.formato === 'a4' ? bloqueEquipos(c, f.ancho, 24).h : 0;
+  return { ancho: f.ancho, alto: f.alto + extra };
+}
+
 function html(c) {
   aplicarDiseno(c.diseno);
-  const f = FORMATOS[c.formato] || FORMATOS.a4;
+  const f = medidas(c);
   const T = "'Bebas Neue','Oswald','Arial Narrow',sans-serif", B = "'Barlow Condensed','Arial Narrow',sans-serif";
   const recta = TEMA.cab !== 'diagonal', curva = TEMA.cab === 'curva';
-  const alto = f.alto, M = 24, alta = alto > 900;
+  const alto = f.alto, M = 24, alta = c.formato === 'historia';
   const ligas = c.verLigas ? c.ligas.filter(l => l.nombre || l.escudo) : [];
   const inv = c.verInvita ? c.invita.filter(x => x.nombre || x.logo) : [];
   const CAB = alta ? 170 : 128, seg = alta ? 50 : 0, segI = alta ? 70 : 0;
@@ -380,6 +426,7 @@ function html(c) {
     ${notaH}
     <div style="flex:1 1 0;min-height:0;margin:0 ${M}px 10px;display:flex;flex-direction:column">${cuerpo}</div>
     ${ligasH}
+    ${bloqueEquipos(c, f.ancho, M).html}
     <div style="flex:none;position:relative;height:${PIE + segI + 8}px">
       <div style="position:absolute;left:0;bottom:0;width:100%;height:${PIE + segI + 8 + 8}px;background:${COLOR.pieBorde};${redPie}clip-path:${clipPb}"></div>
       <div style="position:absolute;left:0;bottom:0;width:100%;height:${PIE + segI + 8}px;background:linear-gradient(110deg,${COLOR.pieA},${COLOR.pieB});${redPie}clip-path:${clipP}"></div>
@@ -392,41 +439,61 @@ function html(c) {
 }
 
 function render() {
-  const f = FORMATOS[e.formato] || FORMATOS.a4;
+  aplicarDiseno(e.diseno);
+  const f = medidas(e);
   const h = html(e);
   const k = Math.min(1, 440 / f.ancho);
   $('preview').innerHTML = `<div style="width:${f.ancho * k}px;height:${f.alto * k}px" class="rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-white"><div style="width:${f.ancho}px;height:${f.alto}px;transform:scale(${k});transform-origin:top left">${h}</div></div>`;
   $('export').innerHTML = `<div style="width:${f.ancho}px;height:${f.alto}px">${h}</div>`;
   try { localStorage.setItem(CLAVE, JSON.stringify(e)); } catch (_) {
-    try { const s = JSON.parse(JSON.stringify(e)); s.ligas.forEach(l => l.escudo = ''); s.invita.forEach(x => x.logo = ''); localStorage.setItem(CLAVE, JSON.stringify(s)); } catch (__) {}
+    try { const s = JSON.parse(JSON.stringify(e)); s.ligas.forEach(l => l.escudo = ''); s.invita.forEach(x => x.logo = ''); (s.equipos || []).forEach(x => x.escudo = ''); localStorage.setItem(CLAVE, JSON.stringify(s)); } catch (__) {}
   }
 }
 
 function tarjeta(tipo, i, x) {
-  const img = tipo === 'liga' ? x.escudo : x.logo;
+  const img = tipo === 'inv' ? x.logo : x.escudo;
   return `<div class="liga-card">
     <label class="up" title="Subir imagen">${img ? `<img src="${img}" alt="">` : '+'}<input type="file" accept="image/*" class="hidden" data-up="${tipo}:${i}"></label>
-    <input class="campo !py-2 min-w-0 flex-1" data-nom="${tipo}:${i}" value="${esc(x.nombre)}" placeholder="Nombre" maxlength="40">
-    ${tipo === 'inv' ? `<button type="button" class="btn-sec" data-del="${i}">Quitar</button>` : ''}</div>`;
+    <input class="campo !py-2 min-w-0 flex-1" data-nom="${tipo}:${i}" value="${esc(x.nombre)}" placeholder="Nombre" maxlength="60">
+    ${tipo !== 'liga' ? `<button type="button" class="btn-sec" data-del="${tipo}:${i}">Quitar</button>` : ''}</div>`;
 }
+const listaDe = (t) => t === 'liga' ? e.ligas : t === 'eq' ? e.equipos : e.invita;
 function paneles() {
   $('lista-ligas').innerHTML = e.ligas.map((l, i) => tarjeta('liga', i, l)).join('');
   $('lista-invita').innerHTML = e.invita.map((x, i) => tarjeta('inv', i, x)).join('');
+  $('lista-equipos').innerHTML = e.equipos.map((x, i) => tarjeta('eq', i, x)).join('') || '<p class="campo-ayuda !mt-0">Todavía no cargaste equipos.</p>';
+  $('eq-cuenta').textContent = e.equipos.length ? `(${e.equipos.length})` : '';
 }
 document.addEventListener('input', (ev) => {
   const n = ev.target.dataset && ev.target.dataset.nom; if (!n) return;
-  const [t, i] = n.split(':'); (t === 'liga' ? e.ligas : e.invita)[+i].nombre = ev.target.value; render();
+  const [t, i] = n.split(':'); listaDe(t)[+i].nombre = ev.target.value; render();
 });
 document.addEventListener('change', async (ev) => {
   const u = ev.target.dataset && ev.target.dataset.up; if (!u || !ev.target.files[0]) return;
   const [t, i] = u.split(':');
-  try { const d = await leerImagen(ev.target.files[0]); if (t === 'liga') e.ligas[+i].escudo = d; else e.invita[+i].logo = d; paneles(); render(); }
+  try { const d = await leerImagen(ev.target.files[0]); if (t === 'inv') e.invita[+i].logo = d; else listaDe(t)[+i].escudo = d; paneles(); render(); }
   catch (_) { alert('No se pudo leer esa imagen.'); }
 });
 document.addEventListener('click', (ev) => {
-  const d = ev.target.dataset && ev.target.dataset.del; if (d == null || d === '') return;
-  e.invita.splice(+d, 1); paneles(); render();
+  const d = ev.target.dataset && ev.target.dataset.del; if (!d || !d.includes(':')) return;
+  const [t, i] = d.split(':'); listaDe(t).splice(+i, 1); paneles(); render();
 });
+// Equipos participantes: agregar uno, pegar una lista, subir muchos escudos juntos, borrar todos
+$('btn-eq-mas').addEventListener('click', () => { e.equipos.push({ nombre: '', escudo: '' }); paneles(); render(); });
+$('btn-eq-pegar').addEventListener('click', () => {
+  const ya = new Set(e.equipos.map(x => x.nombre.trim().toLowerCase()));
+  $('in-eq-texto').value.split(/\r?\n/).map(s => s.replace(/^[\s*•\-–\d.)]+/, '').trim()).filter(Boolean).forEach(n => { if (!ya.has(n.toLowerCase())) { ya.add(n.toLowerCase()); e.equipos.push({ nombre: n, escudo: '' }); } });
+  $('in-eq-texto').value = ''; paneles(); render();
+});
+$('in-eq-multi').addEventListener('change', async (ev) => {
+  for (const file of Array.from(ev.target.files)) {
+    const nombre = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+    try { const d = await leerImagen(file); const ex = e.equipos.find(x => x.nombre.trim().toLowerCase() === nombre.toLowerCase()); if (ex) ex.escudo = d; else e.equipos.push({ nombre, escudo: d }); } catch (_) {}
+  }
+  ev.target.value = ''; paneles(); render();
+});
+$('btn-eq-limpiar').addEventListener('click', () => { if (e.equipos.length && confirm('¿Borrar todos los equipos de la lista?')) { e.equipos = []; paneles(); render(); } });
+$('chk-equipos').checked = e.verEquipos !== false; $('chk-equipos').addEventListener('change', () => { e.verEquipos = $('chk-equipos').checked; render(); });
 $('btn-inv-mas').addEventListener('click', () => { if (e.invita.length < 4) { e.invita.push({ nombre: '', logo: '' }); paneles(); render(); } });
 $('in-logo-cab').addEventListener('change', async (ev) => { if (ev.target.files[0]) { e.logoCab = await leerImagen(ev.target.files[0], 300); render(); } });
 $('btn-logo-cab-q').addEventListener('click', () => { e.logoCab = ''; render(); });
@@ -438,7 +505,7 @@ async function descargar() {
   const b = $('btn-desc'); const lab = b.textContent; b.disabled = true; b.textContent = 'Generando…';
   try {
     if (document.fonts && document.fonts.ready) { await Promise.all(['400 24px "Bebas Neue"', '800 24px "Barlow Condensed"', '700 24px "Barlow Condensed"'].map(x => document.fonts.load(x).catch(() => null))); await document.fonts.ready; }
-    const f = FORMATOS[e.formato] || FORMATOS.a4;
+    const f = medidas(e);
     const nodo = $('export').firstElementChild.firstElementChild;
     const op = { pixelRatio: 1080 / f.ancho, backgroundColor: COLOR.fondo, style: { transform: 'none' }, cacheBust: true };
     if (window.CSS_FUENTES_LIGA) op.fontEmbedCSS = window.CSS_FUENTES_LIGA;
