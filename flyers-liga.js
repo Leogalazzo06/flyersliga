@@ -620,6 +620,9 @@ function htmlFlyer(pag, i, total, c) {
     const fecha = (c.fecha || '').trim();
     const pie = (c.pie || '').trim();
     const contador = total > 1 ? `${i + 1}/${total}` : '';
+    const pieImgs = c.pieImgs || [];
+    const pieImg = pieImgs.length > 0;
+    const altoPieImg = Math.max(20, PIE_H - Math.round(8 * PIE_H / 38) - 8);   // alto del fondo blanco redondeado
 
     return `<div data-flyer="${i}" style="position:relative; width:${f.ancho}px; height:${f.alto}px; background:${COLOR.fondo}; overflow:hidden; font-family:${TEXTO};">
 
@@ -642,9 +645,10 @@ function htmlFlyer(pag, i, total, c) {
         <!-- Barra inferior -->
         <div style="position:absolute; left:0; bottom:0; width:100%; height:${PIE_H + f.seguroInf + 10}px; background:${COLOR.pieBorde}; ${radPie} clip-path:${pieAtras};"></div>
         <div style="position:absolute; left:0; bottom:0; width:100%; height:${PIE_H + f.seguroInf}px; background:linear-gradient(110deg, ${COLOR.pieA} 0%, ${COLOR.pieB} 100%); ${radPie} clip-path:${pieFrente};"></div>
-        <div style="position:absolute; left:${MARGEN}px; right:${MARGEN}px; bottom:${f.seguroInf}px; height:${PIE_H}px; display:flex; align-items:center; justify-content:space-between; padding-top:${Math.round(8 * PIE_H / 38)}px; box-sizing:border-box;">
-            <span style="font-family:${TEXTO}; font-weight:800; font-size:${Math.round(15 * DENS.pieFs)}px; letter-spacing:0.1em; color:${COLOR.cabTexto}; text-transform:uppercase; white-space:nowrap;">${esc(pie)}</span>
-            <span style="font-family:${TITULAR}; font-size:${Math.round(20 * DENS.pieFs)}px; letter-spacing:0.06em; color:${COLOR.cabTexto};">${contador}</span>
+        <div style="position:absolute; left:${MARGEN}px; right:${MARGEN}px; bottom:${f.seguroInf}px; height:${PIE_H}px; display:flex; align-items:center; justify-content:${pieImg ? 'normal' : 'space-between'}; gap:${pieImg ? 10 : 0}px; padding-top:${Math.round(8 * PIE_H / 38)}px; box-sizing:border-box;">
+            <span style="font-family:${TEXTO}; font-weight:800; font-size:${Math.round(15 * DENS.pieFs)}px; letter-spacing:0.1em; color:${COLOR.cabTexto}; text-transform:uppercase; white-space:nowrap; ${pieImg ? 'flex:1 1 0; min-width:0; overflow:hidden; text-overflow:ellipsis;' : ''}">${esc(pie)}</span>
+            ${pieImg ? `<div style="flex:0 0 auto; max-width:62%; height:${altoPieImg}px; padding:0 14px; box-sizing:border-box; background:#fff; border-radius:9999px; display:flex; align-items:center; justify-content:center; gap:12px; overflow:hidden; box-shadow:0 2px 0 rgba(0,0,0,0.18);">${pieImgs.map(u => `<img src="${u}" alt="" draggable="false" style="height:${altoPieImg - 8}px; width:auto; min-width:0; flex:0 1 auto; object-fit:contain; display:block;" />`).join('')}</div>` : ''}
+            <span style="font-family:${TITULAR}; font-size:${Math.round(20 * DENS.pieFs)}px; letter-spacing:0.06em; color:${COLOR.cabTexto}; ${pieImg ? 'flex:1 1 0; text-align:right;' : ''}">${contador}</span>
         </div>
     </div>`;
 }
@@ -1049,6 +1053,8 @@ const ESTADO_INICIAL = {
     fecha: '',
     pie: 'A.F.O.CH',
     logoSubido: '',
+    pieImgs: [],           // imágenes del pie de cada flyer (data URL), sobre un fondo blanco redondeado
+    pieImgMostrar: true,
     usarEscudos: true,
     equipos: [],    // [{ id, nombre, alias, escudo }]  (se guarda aparte, ver CLAVE_EQ)
     // Pestaña de árbitros
@@ -1099,6 +1105,11 @@ function cargarEstado() {
             e.textoArb = typeof g.textoArb === 'string' ? g.textoArb : String(e.texto || '');
             e.anio = Number(e.anio) || new Date().getFullYear();
             e.usarEscudos = e.usarEscudos !== false;
+            e.pieImgMostrar = e.pieImgMostrar !== false;
+            // Antes había una sola imagen (pieImg): pasa a ser la primera de la lista
+            const listaPie = Array.isArray(g.pieImgs) ? g.pieImgs : (g.pieImg ? [g.pieImg] : []);
+            e.pieImgs = listaPie.map(String).filter(u => RE_IMG_DATA.test(u)).slice(0, MAX_PIE_IMGS);
+            delete e.pieImg;
             e.subirFlyers = e.subirFlyers !== false;
             e.equipos = leerEquipos();
             return e;
@@ -1126,7 +1137,7 @@ function guardarEstado() {
     const { equipos, ...resto } = estado;
     try { localStorage.setItem(CLAVE_LS, JSON.stringify(resto)); }
     catch (err) {
-        try { localStorage.setItem(CLAVE_LS, JSON.stringify({ ...resto, logoSubido: '' })); } catch (e2) { /* sin storage */ }
+        try { localStorage.setItem(CLAVE_LS, JSON.stringify({ ...resto, logoSubido: '', pieImgs: [] })); } catch (e2) { /* sin storage */ }
     }
 }
 // Copia en este navegador (localStorage)
@@ -1167,6 +1178,8 @@ async function cargarLogoArchivo() {
     return logoArchivo;
 }
 const logoActual = () => estado.logoSubido || logoArchivo || '';
+const MAX_PIE_IMGS = 6;
+const pieImagenActual = () => (estado.pieImgMostrar !== false && Array.isArray(estado.pieImgs)) ? estado.pieImgs : [];
 
 // ---------- Render ----------
 let temporizador = null;
@@ -1176,6 +1189,7 @@ async function render() {
     await cargarLogoArchivo();
     // La densidad solo vale mientras se arman los flyers (el resto, como la tabla de posiciones, sigue con medidas normales)
     aplicarDensidad(estado.densidad);
+    if (pieImagenActual().length) PIE_H = Math.round(DENS.pie * 1.6);   // pie más alto para que entre la imagen
     let hayEscudos = false;
     try { hayEscudos = renderFlyers(); }
     finally { aplicarDensidad('normal'); H.fila = hayEscudos ? H_FILA.escudos : H_FILA.normal; }
@@ -1193,7 +1207,7 @@ function renderFlyers() {
     const paginas = repartir(bloques, alturaUtil(f));
     const total = paginas.length;
     const nPartidos = bloques.reduce((a, b) => a + b.filas.length, 0);
-    const contexto = { f, diseno: estado.diseno, logoTam: estado.logoTam, titulo: res ? estado.tituloRes : estado.titulo, fecha: estado.fecha, pie: estado.pie, logo: logoActual(), escudoDe, hayEscudos };
+    const contexto = { f, diseno: estado.diseno, logoTam: estado.logoTam, titulo: res ? estado.tituloRes : estado.titulo, fecha: estado.fecha, pie: estado.pie, pieImgs: pieImagenActual(), logo: logoActual(), escudoDe, hayEscudos };
 
     $('resumen').textContent = total
         ? `${nPartidos} ${nPartidos === 1 ? 'partido' : 'partidos'} → ${total} ${total === 1 ? 'flyer' : 'flyers'}`
@@ -1439,6 +1453,11 @@ function llenarInputs() {
     $('btn-logo-quitar').classList.toggle('hidden', !estado.logoSubido);
     $('in-logo-tam').value = estado.logoTam;
     $('chk-escudos').checked = !!estado.usarEscudos;
+    $('chk-pie-img').checked = estado.pieImgMostrar !== false;
+    const nPie = estado.pieImgs.length;
+    $('pie-img-estado').textContent = nPie ? `${nPie} ${nPie === 1 ? 'imagen cargada' : 'imágenes cargadas'} (máx. ${MAX_PIE_IMGS})` : 'Sin imágenes';
+    $('btn-pie-img-quitar').classList.toggle('hidden', nPie < 2);
+    $('lista-pie-img').innerHTML = estado.pieImgs.map((u, i) => `<div class="relative" style="width:3.4rem; height:3.4rem; border:1px solid #e2e8f0; border-radius:0.75rem; background:#fff; display:flex; align-items:center; justify-content:center;"><img src="${u}" alt="" style="max-width:85%; max-height:85%; object-fit:contain; display:block;"><button type="button" data-pie-quitar="${i}" title="Quitar esta imagen" aria-label="Quitar imagen ${i + 1}" style="position:absolute; top:-6px; right:-6px; width:1.2rem; height:1.2rem; border-radius:9999px; background:#b91c1c; color:#fff; font-size:0.75rem; font-weight:800; line-height:1; cursor:pointer;">×</button></div>`).join('');
     $('logo-tam-valor').textContent = `${Math.round(estado.logoTam / 84 * 100)}%`;
 }
 
@@ -1460,6 +1479,42 @@ function leerLogo(archivo) {
         img.src = lector.result;
     };
     lector.readAsDataURL(archivo);
+}
+
+function archivoAPie(archivo) {
+    return new Promise((resolve, reject) => {
+        if (!archivo || !/^image\//.test(archivo.type)) { reject(new Error('no es una imagen')); return; }
+        const lector = new FileReader();
+        lector.onerror = reject;
+        lector.onload = () => {
+            const img = new Image();
+            img.onerror = reject;
+            img.onload = () => {
+                const esc2 = Math.min(1, 160 / img.naturalHeight, 800 / img.naturalWidth);   // alto máx. 160 px, ancho máx. 800 px
+                const c = document.createElement('canvas');
+                c.width = Math.max(1, Math.round(img.naturalWidth * esc2));
+                c.height = Math.max(1, Math.round(img.naturalHeight * esc2));
+                c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                resolve(c.toDataURL('image/png'));
+            };
+            img.src = lector.result;
+        };
+        lector.readAsDataURL(archivo);
+    });
+}
+async function leerPieImgs(archivos) {
+    const lista = Array.from(archivos || []);
+    if (!lista.length) return;
+    const lugar = MAX_PIE_IMGS - estado.pieImgs.length;
+    if (lugar <= 0) { mostrarToast(`Ya hay ${MAX_PIE_IMGS} imágenes: quitá alguna para agregar otra.`, 'error'); return; }
+    let fallo = 0;
+    for (const a of lista.slice(0, lugar)) {
+        try { estado.pieImgs.push(await archivoAPie(a)); } catch (err) { fallo++; }
+    }
+    if (lista.length > lugar) mostrarToast(`Entran ${MAX_PIE_IMGS} imágenes como máximo: se agregaron ${lugar}.`, 'error');
+    else if (fallo) mostrarToast(fallo === 1 ? 'No se pudo leer una de las imágenes.' : `No se pudieron leer ${fallo} imágenes.`, 'error');
+    estado.pieImgMostrar = true;
+    guardarEstado(); llenarInputs(); render();
 }
 
 // ---------- Escudos de los equipos ----------
@@ -2496,6 +2551,15 @@ async function iniciar() {
     $('btn-logo-tam-reset').addEventListener('click', () => { estado.logoTam = 84; guardarEstado(); llenarInputs(); render(); });
     $('in-logo').addEventListener('change', (e) => { leerLogo(e.target.files[0]); e.target.value = ''; });
     $('btn-logo-quitar').addEventListener('click', () => { estado.logoSubido = ''; guardarEstado(); llenarInputs(); render(); });
+    $('in-pie-img').addEventListener('change', (e) => { const fs = Array.from(e.target.files || []); e.target.value = ''; leerPieImgs(fs); });
+    $('btn-pie-img-quitar').addEventListener('click', () => { estado.pieImgs = []; guardarEstado(); llenarInputs(); render(); });
+    $('lista-pie-img').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-pie-quitar]');
+        if (!b) return;
+        estado.pieImgs.splice(Number(b.dataset.pieQuitar), 1);
+        guardarEstado(); llenarInputs(); render();
+    });
+    $('chk-pie-img').addEventListener('change', (e) => { estado.pieImgMostrar = e.target.checked; guardarEstado(); render(); });
     // Ejemplo y Borrar empiezan de cero: ya no se está editando una programación guardada
     $('btn-ejemplo').addEventListener('click', () => { if (estado.pestana === 'resultados') { estado.textoRes = TEXTO_EJEMPLO_RES; guardarEstado(); llenarInputs(); renderActivo(true); return; } if (estado.pestana === 'arbitros') estado.textoArb = TEXTO_EJEMPLO; else estado.texto = TEXTO_EJEMPLO; fijarProg(tipoActual(), '', ''); guardarEstado(); llenarInputs(); sincronizarBotonesProg(); renderActivo(true); });
     $('btn-limpiar').addEventListener('click', () => { if (estado.pestana === 'resultados') { estado.textoRes = ''; guardarEstado(); llenarInputs(); renderActivo(true); return; } if (estado.pestana === 'arbitros') estado.textoArb = ''; else estado.texto = ''; fijarProg(tipoActual(), '', ''); guardarEstado(); llenarInputs(); sincronizarBotonesProg(); renderActivo(true); });
