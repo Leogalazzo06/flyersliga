@@ -62,7 +62,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif}
     </section>
     <section class="seccion">
       <div class="flex items-center justify-between mb-3"><h2 class="seccion-titulo !mb-0">Invita</h2>
-        <label class="flex items-center gap-2 text-xs font-bold text-slate-700"><input id="chk-invita" type="checkbox"> Mostrar</label></div>
+        <div class="flex items-center gap-3"><label class="flex items-center gap-2 text-xs font-bold text-slate-700"><input id="chk-inv-fondo" type="checkbox"> Fondo blanco</label><label class="flex items-center gap-2 text-xs font-bold text-slate-700"><input id="chk-invita" type="checkbox"> Mostrar</label></div></div>
       <div id="lista-invita" class="flex flex-col gap-2"></div>
       <button id="btn-inv-mas" type="button" class="btn-sec mt-2">+ Agregar</button>
       <p class="campo-ayuda">Subí el logo de cada auspiciante u organizador. Si falta el logo, se muestra el nombre escrito.</p>
@@ -230,7 +230,7 @@ Domingo 8/11
 18:00 | Sexto partido
 *19:30 | Entrega de premios`;
 const INI = { texto: TEXTO_INI, etiqueta: 'TORNEO DE SELECCIONES', titulo: 'FEDERATIVO', sub: 'SUB 15', sede: 'Avenida FC', fecha: '7 y 8 de noviembre', entrada: '$ 5.000', pie: '', nota: '',
-  diseno: 'federativo', formato: 'a4', verLigas: true, verInvita: true, logoCab: '',
+  diseno: 'federativo', formato: 'a4', verLigas: true, verInvita: true, invFondo: true, logoCab: '',
   ligas: [{ nombre: 'Liga AFOCH', escudo: '' }, { nombre: 'Liga Nordoeste', escudo: '' }, { nombre: 'Liga Quitilipense', escudo: '' }, { nombre: 'Liga Saenzpeñense', escudo: '' }],
   invita: [{ nombre: 'MVM', logo: '' }, { nombre: 'Villa Ángela', logo: '' }] };
 let e = JSON.parse(JSON.stringify(INI));
@@ -259,19 +259,49 @@ function leerImagen(file, max = 260) {
   });
 }
 
+const RE_LINEA = /^(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\s+(\d{1,2}\/\d{1,2})\s+(\d{1,2})(?:\s*[:.]\s*(\d{2}))?\s*(?:horas?|hs?\.?)?\s*[-|–—]?\s*(.+)$/i;
+const RE_ESP = /acto|inaugural|premio|entrega|almuerzo|sorteo|cierre|cena|apertura/i;
+const MAYUS = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 function parsear(texto) {
+  const lineas = String(texto).split(/\r?\n/).map(s => s.trim()).filter(s => s && !/^(lugar|valor|sede|entradas?)\b/i.test(s));
+  // Formato libre: "Sábado 7/11 16.30 Primer Partido". Si el mismo día aparece con fechas distintas (error de tipeo), gana la más repetida.
+  const fechas = {};
+  lineas.forEach(l => { const m = l.match(RE_LINEA); if (m) { const d = m[1].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); (fechas[d] = fechas[d] || {})[m[2]] = ((fechas[d] || {})[m[2]] || 0) + 1; } });
   const dias = []; let cur = null;
-  for (let raw of String(texto).split(/\r?\n/)) {
-    let l = raw.trim(); if (!l) continue;
+  const grupo = (nombre) => { let g = dias.find(x => x.dia === nombre); if (!g) { g = { dia: nombre, filas: [] }; dias.push(g); } return g; };
+  for (const l of lineas) {
+    const L = l.match(RE_LINEA);
+    if (L) {
+      const d = L[1].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const fecha = Object.entries(fechas[d]).sort((x, y) => y[1] - x[1])[0][0];
+      const txt = L[5].trim().replace(/^\*\s*/, '');
+      const vs = txt.split(/\s+vs\.?\s+/i);
+      grupo(`${MAYUS(L[1].toLowerCase())} ${fecha}`).filas.push({ hora: `${String(L[3]).padStart(2, '0')}:${L[4] || '00'}`, esp: RE_ESP.test(txt), txt, vs: vs.length === 2 ? vs : null, orden: (+L[3]) * 60 + (+(L[4] || 0)) });
+      continue;
+    }
     const m = l.match(/^(\*)?\s*(\d{1,2})\s*[:.]\s*(\d{2})\s*(?:hs?\.?)?\s*[|\-–—]\s*(.+)$/i);
     if (m) {
       if (!cur) { cur = { dia: '', filas: [] }; dias.push(cur); }
-      let txt = m[4].trim(); const esp = !!m[1] || txt.startsWith('*'); txt = txt.replace(/^\*\s*/, '');
+      let txt = m[4].trim(); const esp = !!m[1] || txt.startsWith('*') || RE_ESP.test(txt); txt = txt.replace(/^\*\s*/, '');
       const vs = txt.split(/\s+vs\.?\s+/i);
       cur.filas.push({ hora: `${String(m[2]).padStart(2, '0')}:${m[3]}`, esp, txt, vs: vs.length === 2 ? vs : null });
-    } else { cur = { dia: l.replace(/^\*+|\*+$/g, '').trim(), filas: [] }; dias.push(cur); }
+    } else { cur = grupo(l.replace(/^\*+|\*+$/g, '').trim()); }
   }
+  dias.forEach(d => { if (d.filas.every(r => r.orden != null)) d.filas.sort((x, y) => x.orden - y.orden); });
   return dias.filter(d => d.filas.length || d.dia);
+}
+// Lee "Lugar: ..." y "Valor entradas $ 5 mil" del texto pegado y completa Sede y Entrada
+function extraerDatos() {
+  const t = String(e.texto);
+  const lu = t.match(/^\s*(?:lugar|sede)\s*:\s*(.+)$/im);
+  if (lu) { e.sede = lu[1].trim(); $('in-sede').value = e.sede; }
+  const va = t.match(/^\s*valor(?:\s+de)?(?:\s+las)?\s+entradas?\s*:?\s*(.+)$/im);
+  if (va) {
+    const mm = va[1].match(/(\d+(?:[.,]\d+)?)\s*(mil)?/i);
+    if (mm) { let n = parseFloat(mm[1].replace(',', '.')); if (mm[2]) n *= 1000; e.entrada = '$ ' + Math.round(n).toLocaleString('es-AR'); }
+    else e.entrada = va[1].trim();
+    $('in-entrada').value = e.entrada;
+  }
 }
 
 function html(c) {
@@ -283,7 +313,7 @@ function html(c) {
   const ligas = c.verLigas ? c.ligas.filter(l => l.nombre || l.escudo) : [];
   const inv = c.verInvita ? c.invita.filter(x => x.nombre || x.logo) : [];
   const CAB = alta ? 170 : 128, seg = alta ? 50 : 0, segI = alta ? 70 : 0;
-  const PIE = inv.length ? 96 : 44;
+  const PIE = inv.length ? 108 : 44;
   const dias = parsear(c.texto);
   const lineas = (c.titulo || '').split('\n').map(s => s.trim()).filter(Boolean);
   const tLogo = 80;
@@ -328,8 +358,12 @@ function html(c) {
         <div style="width:58px;height:58px;border-radius:9999px;background:${COLOR.cabA};border:2px solid ${COLOR.cabBorde};display:flex;align-items:center;justify-content:center;overflow:hidden">${l.escudo ? `<img src="${l.escudo}" alt="" style="max-width:80%;max-height:80%;object-fit:contain">` : `<span style="font-family:${T};font-size:20px;color:${COLOR.cabTexto};opacity:.7">${esc((l.nombre || '?').replace(/^liga\s+/i, '').slice(0, 2).toUpperCase())}</span>`}</div>
         <span style="font-family:${B};font-weight:800;font-size:${px(ajustar(l.nombre, 14, colW - 8, 0.47))};line-height:1;color:${COLOR.tinta};text-transform:uppercase;letter-spacing:.03em;white-space:nowrap">${esc(l.nombre)}</span></div>`).join('')}</div></div>` : '';
 
-  const invH = inv.length ? `<div style="font-family:${B};font-weight:700;font-size:12px;letter-spacing:.32em;color:${COLOR.cabTexto};opacity:.9;text-transform:uppercase;margin-bottom:6px">Invita</div>
-      <div style="display:flex;align-items:center;justify-content:center;gap:30px;height:38px">${inv.map(x => x.logo ? `<img src="${x.logo}" alt="${esc(x.nombre)}" style="max-height:38px;max-width:${Math.floor((f.ancho - M * 2 - 30 * (inv.length - 1)) / inv.length)}px;object-fit:contain">` : `<span style="font-family:${T};font-size:26px;letter-spacing:.05em;color:${COLOR.cabTexto};text-transform:uppercase;white-space:nowrap">${esc(x.nombre)}</span>`).join('')}</div>` : '';
+  const panel = c.invFondo !== false;
+  const gapI = 26, padI = panel ? 18 : 0;
+  const maxLogo = Math.floor((f.ancho - M * 2 - padI * 2 - gapI * (inv.length - 1)) / Math.max(inv.length, 1));
+  const invLogos = inv.map(x => x.logo ? `<img src="${x.logo}" alt="${esc(x.nombre)}" style="max-height:40px;max-width:${maxLogo}px;object-fit:contain;display:block">` : `<span style="font-family:${T};font-size:26px;letter-spacing:.05em;color:${panel ? '#18181B' : COLOR.cabTexto};text-transform:uppercase;white-space:nowrap">${esc(x.nombre)}</span>`).join('');
+  const invH = inv.length ? `<div style="font-family:${B};font-weight:800;font-size:13px;letter-spacing:.34em;color:${COLOR.cabTexto};text-transform:uppercase;margin-bottom:6px">Invita</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:${gapI}px;${panel ? `background:#fff;border-radius:14px;padding:7px ${padI}px;box-shadow:0 3px 0 rgba(0,0,0,.28);` : ''}min-height:40px">${invLogos}</div>` : '';
   const pieTxt = (c.pie || '').trim();
 
   return `<div style="position:relative;width:${f.ancho}px;height:${alto}px;background:${COLOR.fondo};overflow:hidden;font-family:${B};display:flex;flex-direction:column">
@@ -397,6 +431,7 @@ $('btn-inv-mas').addEventListener('click', () => { if (e.invita.length < 4) { e.
 $('in-logo-cab').addEventListener('change', async (ev) => { if (ev.target.files[0]) { e.logoCab = await leerImagen(ev.target.files[0], 300); render(); } });
 $('btn-logo-cab-q').addEventListener('click', () => { e.logoCab = ''; render(); });
 $('chk-ligas').checked = !!e.verLigas; $('chk-ligas').addEventListener('change', () => { e.verLigas = $('chk-ligas').checked; render(); });
+$('chk-inv-fondo').checked = e.invFondo !== false; $('chk-inv-fondo').addEventListener('change', () => { e.invFondo = $('chk-inv-fondo').checked; render(); });
 $('chk-invita').checked = !!e.verInvita; $('chk-invita').addEventListener('change', () => { e.verInvita = $('chk-invita').checked; render(); });
 
 async function descargar() {
@@ -416,9 +451,9 @@ async function descargar() {
 
 const campos = { 'in-texto': 'texto', 'in-etiqueta': 'etiqueta', 'in-titulo': 'titulo', 'in-sub': 'sub', 'in-sede': 'sede', 'in-fecha': 'fecha', 'in-entrada': 'entrada', 'in-pie': 'pie', 'in-nota': 'nota', 'sel-diseno': 'diseno', 'sel-formato': 'formato' };
 $('sel-diseno').innerHTML = Object.entries(DISENOS).map(([k, d]) => `<option value="${k}">${d.label}</option>`).join('');
-for (const [id, k] of Object.entries(campos)) { $(id).value = e[k]; $(id).addEventListener('input', () => { e[k] = $(id).value; render(); }); }
+for (const [id, k] of Object.entries(campos)) { $(id).value = e[k]; $(id).addEventListener('input', () => { e[k] = $(id).value; if (k === 'texto') extraerDatos(); render(); }); }
 $('btn-desc').addEventListener('click', descargar);
-paneles(); render();
+extraerDatos(); paneles(); render();
 </script>
 </body>
 </html>
