@@ -62,7 +62,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif}
     </section>
     <section class="seccion">
       <div class="flex items-center justify-between mb-3"><h2 class="seccion-titulo !mb-0">Equipos participantes <span id="eq-cuenta" class="text-slate-400 font-bold normal-case tracking-normal"></span></h2>
-        <label class="flex items-center gap-2 text-xs font-bold text-slate-700"><input id="chk-equipos" type="checkbox"> Mostrar</label></div>
+        <div class="flex items-center gap-3"><label class="flex items-center gap-2 text-xs font-bold text-slate-700"><input id="chk-eq-fondo" type="checkbox"> Fondo blanco</label><label class="flex items-center gap-2 text-xs font-bold text-slate-700"><input id="chk-equipos" type="checkbox"> Mostrar</label></div></div>
       <div id="lista-equipos" class="flex flex-col gap-2 max-h-[45vh] overflow-y-auto pr-1"></div>
       <div class="flex flex-wrap gap-2 mt-3">
         <button id="btn-eq-mas" type="button" class="btn-sec">+ Agregar equipo</button>
@@ -247,7 +247,7 @@ Domingo 8/11
 18:00 | Sexto partido
 *19:30 | Entrega de premios`;
 const INI = { texto: TEXTO_INI, etiqueta: 'TORNEO DE SELECCIONES', titulo: 'FEDERATIVO', sub: 'SUB 15', sede: 'Avenida FC', fecha: '7 y 8 de noviembre', entrada: '$ 5.000', pie: '', nota: '',
-  diseno: 'federativo', formato: 'a4', verLigas: true, verInvita: true, invFondo: true, logoCab: '', verEquipos: true, equipos: [],
+  diseno: 'federativo', formato: 'a4', verLigas: true, verInvita: true, invFondo: true, logoCab: '', verEquipos: true, eqFondo: true, equipos: [],
   ligas: [{ nombre: 'Liga AFOCH', escudo: '' }, { nombre: 'Liga Nordoeste', escudo: '' }, { nombre: 'Liga Quitilipense', escudo: '' }, { nombre: 'Liga Saenzpeñense', escudo: '' }],
   invita: [{ nombre: 'MVM', logo: '' }, { nombre: 'Villa Ángela', logo: '' }] };
 let e = JSON.parse(JSON.stringify(INI));
@@ -328,18 +328,19 @@ function bloqueEquipos(c, ancho, M) {
   const T = "'Bebas Neue','Oswald','Arial Narrow',sans-serif", B = "'Barlow Condensed','Arial Narrow',sans-serif";
   const W = ancho - M * 2, n = lista.length, hayEsc = lista.some(x => x.escudo);
   const titulo = `<div style="display:flex;align-items:center;gap:8px;height:21px;margin-bottom:7px"><span style="width:8px;height:8px;background:${COLOR.celeste};transform:rotate(45deg)"></span><span style="font-family:${B};font-weight:800;font-size:14px;letter-spacing:.12em;color:${COLOR.tinta};text-transform:uppercase;white-space:nowrap">Equipos participantes</span><span style="flex:1;height:2px;background:${COLOR.celesteSuave}"></span></div>`;
+  const blanco = c.eqFondo !== false, oscuro = '#18181B';
   let cuerpo, hCont;
   if (hayEsc) {
     const cols = n <= 4 ? n : n <= 8 ? 4 : n <= 15 ? 5 : 6, circ = cols <= 4 ? 44 : cols === 5 ? 38 : 34, rows = Math.ceil(n / cols);
     hCont = rows * (circ + 4 + 28 + 8) - 8;
     cuerpo = `<div style="display:flex;flex-wrap:wrap;justify-content:center;row-gap:8px">${lista.map(x => `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;width:${Math.floor(W / cols)}px;height:${circ + 4 + 28}px">
-      <div style="width:${circ}px;height:${circ}px;border-radius:9999px;background:${COLOR.cabA};border:2px solid ${COLOR.cabBorde};display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none">${x.escudo ? `<img src="${x.escudo}" alt="" style="max-width:80%;max-height:80%;object-fit:contain">` : `<span style="font-family:${T};font-size:${Math.round(circ * .4)}px;color:${COLOR.cabTexto};opacity:.7">${esc((x.nombre || '?').slice(0, 2).toUpperCase())}</span>`}</div>
+      <div style="width:${circ}px;height:${circ}px;border-radius:9999px;background:${blanco ? '#fff' : COLOR.cabA};border:2px solid ${COLOR.cabBorde};display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none">${x.escudo ? `<img src="${x.escudo}" alt="" style="max-width:80%;max-height:80%;object-fit:contain">` : `<span style="font-family:${T};font-size:${Math.round(circ * .4)}px;color:${blanco ? oscuro : COLOR.cabTexto};opacity:.7">${esc((x.nombre || '?').slice(0, 2).toUpperCase())}</span>`}</div>
       <span style="font-family:${B};font-weight:800;font-size:12px;line-height:1.08;color:${COLOR.tinta};text-transform:uppercase;letter-spacing:.02em;text-align:center;max-height:28px;overflow:hidden;padding:0 3px">${esc(x.nombre)}</span></div>`).join('')}</div>`;
   } else {
     let rows = 1, usado = 0;
     lista.forEach(x => { const w = Math.min(W, (x.nombre || '').length * 7.2 + 24); if (usado && usado + 6 + w > W) { rows++; usado = w; } else usado += (usado ? 6 : 0) + w; });
     hCont = rows * 26 + (rows - 1) * 6;
-    cuerpo = `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px">${lista.map(x => `<span style="height:26px;display:inline-flex;align-items:center;padding:0 12px;border-radius:9999px;background:${COLOR.celesteFondo};border:1.5px solid ${COLOR.celesteSuave};font-family:${B};font-weight:800;font-size:14px;letter-spacing:.03em;color:${COLOR.tinta};text-transform:uppercase;white-space:nowrap">${esc(x.nombre)}</span>`).join('')}</div>`;
+    cuerpo = `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px">${lista.map(x => `<span style="height:26px;display:inline-flex;align-items:center;padding:0 12px;border-radius:9999px;background:${blanco ? '#fff' : COLOR.celesteFondo};border:1.5px solid ${blanco ? COLOR.cabBorde : COLOR.celesteSuave};font-family:${B};font-weight:800;font-size:14px;letter-spacing:.03em;color:${blanco ? oscuro : COLOR.tinta};text-transform:uppercase;white-space:nowrap">${esc(x.nombre)}</span>`).join('')}</div>`;
   }
   return { h: 28 + hCont + 10, html: `<div style="flex:none;margin:0 ${M}px 10px">${titulo}${cuerpo}</div>` };
 }
@@ -493,6 +494,7 @@ $('in-eq-multi').addEventListener('change', async (ev) => {
   ev.target.value = ''; paneles(); render();
 });
 $('btn-eq-limpiar').addEventListener('click', () => { if (e.equipos.length && confirm('¿Borrar todos los equipos de la lista?')) { e.equipos = []; paneles(); render(); } });
+$('chk-eq-fondo').checked = e.eqFondo !== false; $('chk-eq-fondo').addEventListener('change', () => { e.eqFondo = $('chk-eq-fondo').checked; render(); });
 $('chk-equipos').checked = e.verEquipos !== false; $('chk-equipos').addEventListener('change', () => { e.verEquipos = $('chk-equipos').checked; render(); });
 $('btn-inv-mas').addEventListener('click', () => { if (e.invita.length < 4) { e.invita.push({ nombre: '', logo: '' }); paneles(); render(); } });
 $('in-logo-cab').addEventListener('change', async (ev) => { if (ev.target.files[0]) { e.logoCab = await leerImagen(ev.target.files[0], 300); render(); } });
