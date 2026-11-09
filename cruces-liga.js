@@ -14,8 +14,13 @@
 //   A: 1° ZONA NORTE: EQUIPO 1 VS 4° ZONA SUR: EQUIPO 2   -> cruce (A, B, C, D)
 //   MARCELINO UGARTE/ALVEAR                               -> si todavía no se sabe, separar con /
 //   SEMIFINALES: / A VS C / B VS D                        -> quién se cruza en semis (opcional)
+//   A VS C - Local Cooperativa                           -> en las semis, el equipo local va primero (arriba); los cuartos no se mueven
 //   ... – Sábado 14/11 – 16:00 Hs                         -> día y hora (opcional) al final de un cruce, de una semi o de la FINAL
 //   A: Sábado 14/11 – 16:00 Hs                            -> o en un renglón aparte, para agregarlos después
+//   ... VS EQUIPO 2 – 2-1                                 -> resultado (goles del 1° equipo - goles del 2°): el que pierde se oscurece
+//   ... VS EQUIPO 2 – 1-1 (4-3 pen)                       -> si hubo penales, entre paréntesis
+//   A: 2-1                                                -> o en un renglón aparte, para cargarlo después
+//   A: PASA M. UGARTE                                     -> si no tenés el resultado, solo quién pasó (se oscurece el otro)
 // ============================================================
 (function () {
     'use strict';
@@ -69,16 +74,36 @@ FINAL – 14:00 Hs`;
         pie: 'A.F.O.CH',
         paleta: 'medianoche',
         formato: 'vertical',
+        soloEscudos: false,
     };
 
     // Paletas del flyer: fondo oscuro sobrio. El color de acento lo da la copa (oro / plata / celeste de la liga)
     const PALETAS = {
         medianoche: { label: 'Medianoche', sub: 'Azul muy oscuro',
-            top: '#050A18', mid: '#071634', bot: '#0B2253', foco: 'rgba(80,150,255,0.24)',
+            patron: 'cancha', top: '#050A18', mid: '#071634', bot: '#0B2253', foco: 'rgba(80,150,255,0.24)',
             borde: 'rgba(255,255,255,0.20)', caja: 'rgba(255,255,255,0.06)', tira: 'rgba(2,6,20,0.60)', tenue: 'rgba(255,255,255,0.60)', linea: 'rgba(255,255,255,0.42)' },
         carbon: { label: 'Carbón', sub: 'Negro y metal',
-            top: '#060607', mid: '#0F1013', bot: '#1B1D23', foco: 'rgba(255,255,255,0.13)',
+            patron: 'cancha', top: '#060607', mid: '#0F1013', bot: '#1B1D23', foco: 'rgba(255,255,255,0.13)',
             borde: 'rgba(255,255,255,0.20)', caja: 'rgba(255,255,255,0.06)', tira: 'rgba(0,0,0,0.55)', tenue: 'rgba(255,255,255,0.60)', linea: 'rgba(255,255,255,0.42)' },
+
+        champions: { label: 'Champions', sub: 'Azul real con rayos', patron: 'rayos',
+            top: '#02051A', mid: '#061243', bot: '#0C2486', foco: 'rgba(110,160,255,0.40)',
+            borde: 'rgba(190,215,255,0.28)', caja: 'rgba(120,160,255,0.09)', tira: 'rgba(1,4,24,0.66)', tenue: 'rgba(225,235,255,0.66)', linea: 'rgba(200,220,255,0.50)' },
+        esmeralda: { label: 'Esmeralda', sub: 'Verde césped de noche', patron: 'cancha',
+            top: '#020E08', mid: '#06231A', bot: '#0C4030', foco: 'rgba(70,225,150,0.22)',
+            borde: 'rgba(255,255,255,0.20)', caja: 'rgba(255,255,255,0.06)', tira: 'rgba(0,12,6,0.62)', tenue: 'rgba(255,255,255,0.62)', linea: 'rgba(255,255,255,0.44)' },
+        bordo: { label: 'Bordó', sub: 'Granate profundo', patron: 'diagonal',
+            top: '#12030A', mid: '#2A0814', bot: '#4A1126', foco: 'rgba(255,100,135,0.22)',
+            borde: 'rgba(255,255,255,0.20)', caja: 'rgba(255,255,255,0.06)', tira: 'rgba(14,0,6,0.62)', tenue: 'rgba(255,255,255,0.62)', linea: 'rgba(255,255,255,0.44)' },
+        violeta: { label: 'Violeta', sub: 'Noche eléctrica', patron: 'hex',
+            top: '#080514', mid: '#160A32', bot: '#2B1263', foco: 'rgba(165,115,255,0.30)',
+            borde: 'rgba(225,205,255,0.24)', caja: 'rgba(170,130,255,0.08)', tira: 'rgba(6,2,20,0.64)', tenue: 'rgba(240,232,255,0.64)', linea: 'rgba(220,200,255,0.46)' },
+        oceano: { label: 'Océano', sub: 'Turquesa profundo', patron: 'puntos',
+            top: '#01111A', mid: '#04303F', bot: '#07576B', foco: 'rgba(60,210,235,0.26)',
+            borde: 'rgba(255,255,255,0.22)', caja: 'rgba(255,255,255,0.07)', tira: 'rgba(0,10,16,0.62)', tenue: 'rgba(255,255,255,0.64)', linea: 'rgba(255,255,255,0.46)' },
+        fuego: { label: 'Fuego', sub: 'Negro y brasa', patron: 'rayos',
+            top: '#080403', mid: '#1C0B07', bot: '#3C1509', foco: 'rgba(255,140,60,0.30)',
+            borde: 'rgba(255,225,200,0.22)', caja: 'rgba(255,160,90,0.07)', tira: 'rgba(10,3,0,0.64)', tenue: 'rgba(255,240,230,0.64)', linea: 'rgba(255,220,190,0.46)' },
     };
     const ACENTOS = {
         ORO:   { a: '#F6E2A8', b: '#E0B14A', c: '#9A6B1C' },
@@ -116,6 +141,27 @@ FINAL – 14:00 Hs`;
         t = t.replace(/\s+/g, ' ').replace(/\s*[-–—|,·:]\s*(?=[-–—|,·]\s|$)/g, ' ').replace(/[\s\-–—|,·:]+$/, '').replace(/^[\s\-–—|,·]+/, '').trim();
         return { texto: t, hor: { dia, fecha, hora } };
     }
+    // Resultado al final del renglón: "2-1" o "1-1 (4-3 pen)". El primer número es del primer equipo del cruce.
+    const RE_RESULTADO = /(?:^|[\s:])(?:resultado\s*:?\s*)?(\d{1,2})\s*[-–—]\s*(\d{1,2})(?:\s*\(\s*(?:pen\w*\.?\s*)?(\d{1,2})\s*[-–—]\s*(\d{1,2})\s*(?:pen\w*\.?|p\.?)?\s*\))?\s*$/i;
+    // Quién queda eliminado: el que hizo menos goles; si empatan, el que perdió los penales. Sin definición → nadie.
+    const norm = (s) => sinAcentos(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    // "A: PASA M. UGARTE": busca de qué lado del cruce está ese equipo (alcanza con una parte del nombre) y oscurece al otro
+    function resolverPasa(b, k) {
+        const nom = b.pasa && b.pasa[k], q = b.qf[k];
+        const t = norm(nom || '');
+        if (!t || !q) return null;
+        const coincide = (lado) => lado.opts.some(o => { const n = norm(o); return n && (n.includes(t) || t.includes(n)); });
+        const ca = coincide(q.a), cb = coincide(q.b);
+        if (ca === cb) return null;
+        return { a: null, b: null, penA: null, penB: null, elim: ca ? 'b' : 'a' };
+    }
+    function resolverCruce(r) {
+        if (!r) return null;
+        let elim = null;
+        if (r.a !== r.b) elim = r.a > r.b ? 'b' : 'a';
+        else if (r.penA != null && r.penA !== r.penB) elim = r.penA > r.penB ? 'b' : 'a';
+        return { ...r, elim };
+    }
     const limpiar = (l) => String(l).replace(/[\u200b\t\u00a0]/g, ' ').replace(/^[\s•*·▪●\-–—]+/, '').replace(/\*+/g, '').replace(/\s+/g, ' ').trim();
 
     function detectarCategoria(l) {
@@ -135,7 +181,7 @@ FINAL – 14:00 Hs`;
     function parsear(texto) {
         const llaves = [], avisos = [];
         let cat = '', copa = '', cur = null;
-        const nueva = () => { cur = { cat, copa, qf: {}, orden: [], semis: [], semisHor: [], hor: {}, final: null }; llaves.push(cur); return cur; };
+        const nueva = () => { cur = { cat, copa, qf: {}, orden: [], semis: [], semisHor: [], semisLocal: [], hor: {}, res: {}, pasa: {}, final: null }; llaves.push(cur); return cur; };
         String(texto || '').split(/\r?\n/).forEach(raw => {
             const l = limpiar(raw);
             if (!l) return;
@@ -144,10 +190,15 @@ FINAL – 14:00 Hs`;
             if ((m = l.match(/^copa\s+de\s+([a-záéíóúñ]+)\s*:?$/i))) { copa = m[1].toUpperCase(); nueva(); return; }
             const ex = extraerHorario(l);
             let lt = ex.texto.replace(/^semifinal(?:es)?\s*\d?\s*:?\s*/i, '').trim();
+            let res = null;
+            lt = lt.replace(RE_RESULTADO, (m0, g1, g2, p1, p2) => {
+                res = { a: Number(g1), b: Number(g2), penA: p1 != null ? Number(p1) : null, penB: p2 != null ? Number(p2) : null };
+                return ' ';
+            }).replace(/[\s\-–—|,·:]+$/, '').trim();
             if (!lt && /^semifinal/i.test(l) && !ex.hor) return;
             if (/^(la\s+)?final$/i.test(lt)) { if (cur && ex.hor) cur.final = ex.hor; return; }
-            if ((m = lt.match(/^([A-H])\s+vs\.?\s+([A-H])$/i))) {
-                if (cur) { cur.semis.push([m[1].toUpperCase(), m[2].toUpperCase()]); cur.semisHor.push(ex.hor); }
+            if ((m = lt.match(/^([A-H])\s+vs\.?\s+([A-H])(?:[\s\-–—|,·:]*\blocal(?:[ií]a)?\b\s*:?\s*(.+))?$/i))) {
+                if (cur) { cur.semis.push([m[1].toUpperCase(), m[2].toUpperCase()]); cur.semisHor.push(ex.hor); cur.semisLocal.push((m[3] || '').trim()); }
                 return;
             }
             if ((m = lt.match(/^([A-H])\s*[:\-.)]\s*(.+?)\s+vs\.?\s+(.+)$/i))) {
@@ -156,9 +207,15 @@ FINAL – 14:00 Hs`;
                 cur.qf[k] = { a: parsearLado(m[2]), b: parsearLado(m[3]) };
                 if (!cur.orden.includes(k)) cur.orden.push(k);
                 if (ex.hor) cur.hor[k] = ex.hor;
+                if (res) cur.res[k] = res;
                 return;
             }
-            if (ex.hor && cur && (m = lt.match(/^([A-H])$/i))) { cur.hor[m[1].toUpperCase()] = ex.hor; return; }
+            if (cur && (m = lt.match(/^([A-H])\s*[:\-.)]\s*(?:pas[oó]|pasa|gan[oó]|gana)\s+(.+)$/i))) { cur.pasa[m[1].toUpperCase()] = m[2].trim(); return; }
+            if ((ex.hor || res) && cur && (m = lt.match(/^([A-H])$/i))) {
+                if (ex.hor) cur.hor[m[1].toUpperCase()] = ex.hor;
+                if (res) cur.res[m[1].toUpperCase()] = res;
+                return;
+            }
             avisos.push(`No entendí este renglón: “${l.slice(0, 60)}”`);
         });
         const validas = llaves.filter(b => b.orden.length);
@@ -171,6 +228,7 @@ FINAL – 14:00 Hs`;
             while (s.length < 2) s.push([letras[0] || 'A', letras[1] || 'B']);
             b.semis = s;
             b.semisHor = [b.semisHor[0] || null, b.semisHor[1] || null];
+            b.semisLocal = [b.semisLocal[0] || '', b.semisLocal[1] || ''];
         });
         return { llaves: validas, avisos };
     }
@@ -219,37 +277,69 @@ FINAL – 14:00 Hs`;
         return (pal.length > 1 ? pal[0][0] + pal[1][0] : (pal[0] || '?').slice(0, 2)).toUpperCase();
     };
 
+    // Columna del resultado (goles y, si hubo, penales) a la derecha de un equipo
+
+    function marcadorHtml(st, o, elim) {
+
+        if (!st || st.gol == null) return '';
+
+        const { P, A } = o;
+
+        const cGol = elim ? 'rgba(255,255,255,0.4)' : st.gana ? A.b : '#fff';
+
+        return `<div style="width:24px; flex-shrink:0; align-self:stretch; display:flex; flex-direction:column; align-items:center; justify-content:center; border-left:1px solid ${P.borde}; box-sizing:border-box; padding-left:4px; color:${cGol};"><div style="font-family:${api.TITULAR}; font-size:21px; line-height:1;">${st.gol}</div>${st.pen != null ? `<div style="font-family:${api.TEXTO}; font-weight:700; font-size:9px; line-height:1; margin-top:3px;">(${st.pen})</div>` : ''}</div>`;
+
+    }
+
+
+
     // Un lado del cruce (escudo/s + zona + nombre/s)
-    function ladoHtml(lado, o) {
+    function ladoHtml(lado, o, st) {
         const { P, A, rowH, textoAncho, conEscudos, escudoDe } = o;
         if (!lado) {
             return `<div style="height:${rowH}px; display:flex; align-items:center; justify-content:center; font-family:${api.TEXTO}; font-weight:700; font-size:11px; letter-spacing:0.16em; color:${P.tenue};">A DEFINIR</div>`;
         }
         const opts = lado.opts.length ? lado.opts : ['A DEFINIR'];
+        // st = resultado de este lado { gol, pen, elim, gana }. Si quedó eliminado: escudo y texto oscurecidos.
+        const elim = !!(st && st.elim);
+        const dim = elim ? ' filter:grayscale(1) brightness(0.42); opacity:0.8;' : '';
+        const cNombre = elim ? 'rgba(255,255,255,0.36)' : '#fff';
+        const conGol = !!(st && st.gol != null);
+        const tAncho = textoAncho - (conGol ? 30 : 0);
         const n = opts.length;
+        // Un escudo (o círculo con iniciales si falta), oscurecido si el equipo quedó eliminado
+        const pieza = (nombre, tam) => {
+            const u = escudoDe ? escudoDe(nombre) : '';
+            return u
+                ? `<img src="${u}" alt="" draggable="false" style="width:${tam}px; height:${tam}px; object-fit:contain; display:block;${dim}" />`
+                : `<div style="width:${tam}px; height:${tam}px; border-radius:9999px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.28); box-sizing:border-box; display:flex; align-items:center; justify-content:center; font-family:${api.TEXTO}; font-weight:700; font-size:${Math.round(tam * 0.38)}px; color:rgba(255,255,255,0.75); line-height:1;${dim}">${esc(siglas(nombre))}</div>`;
+        };
+        const solo = !!(conEscudos && o.soloEscudos);
         let escudos = '';
-        if (conEscudos) {
+        if (conEscudos && !solo) {
             const tam = n === 1 ? Math.min(34, rowH - 14) : n === 2 ? 22 : 14;
-            escudos = `<div style="width:34px; flex-shrink:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:${n > 2 ? 1 : 3}px;">${opts.map(nombre => {
-                const u = escudoDe ? escudoDe(nombre) : '';
-                return u
-                    ? `<img src="${u}" alt="" draggable="false" style="width:${tam}px; height:${tam}px; object-fit:contain; display:block;" />`
-                    : `<div style="width:${tam}px; height:${tam}px; border-radius:9999px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.28); box-sizing:border-box; display:flex; align-items:center; justify-content:center; font-family:${api.TEXTO}; font-weight:700; font-size:${Math.round(tam * 0.38)}px; color:rgba(255,255,255,0.75); line-height:1;">${esc(siglas(nombre))}</div>`;
-            }).join('')}</div>`;
+            escudos = `<div style="width:34px; flex-shrink:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:${n > 2 ? 1 : 3}px;">${opts.map(nombre => pieza(nombre, tam)).join('')}</div>`;
         }
-        const seed = lado.seed ? `<div style="font-family:${api.TEXTO}; font-weight:700; font-size:9.5px; letter-spacing:0.12em; color:${A.b}; line-height:1; margin-bottom:${n > 2 ? 1 : 3}px; white-space:nowrap;">${esc(lado.seed)}</div>` : '';
+        const seed = lado.seed ? `<div style="font-family:${api.TEXTO}; font-weight:700; font-size:9.5px; letter-spacing:0.12em; color:${elim ? 'rgba(255,255,255,0.3)' : A.b}; line-height:1; margin-bottom:${n > 2 ? 1 : 3}px; white-space:nowrap;">${esc(lado.seed)}</div>` : '';
+        // Modo "solo escudos": sin nombres, escudo(s) centrados (con la zona arriba, si la hay)
+        if (solo) {
+            const tam = Math.min(n === 1 ? 36 : n === 2 ? 30 : n === 3 ? 24 : 20, rowH - (lado.seed ? 24 : 14));
+            const marc = marcadorHtml(st, o, elim);
+            return `<div style="height:${rowH}px; display:flex; align-items:center; gap:6px; padding:0 ${conGol ? 4 : 7}px 0 8px; box-sizing:border-box;${elim ? ' background:rgba(0,0,0,0.38);' : ''}"><div style="flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center;">${seed}<div style="display:flex; align-items:center; justify-content:center; gap:5px;">${opts.map(nombre => pieza(nombre, tam)).join('')}</div></div>${marc}</div>`;
+        }
         let nombres;
         if (n === 1) {
             const len = opts[0].length;
-            const fs = len <= 14 ? 15 : len <= 20 ? 13 : 12;
-            nombres = `<div style="font-family:${api.TEXTO}; font-weight:700; font-size:${fs}px; line-height:1.04; color:#fff; text-transform:uppercase; letter-spacing:0.02em; overflow:hidden; max-height:${Math.round(fs * 3.2)}px;">${esc(opts[0])}</div>`;
+            const fs = (len <= 14 ? 15 : len <= 20 ? 13 : 12) - (conGol ? 1.5 : 0);
+            nombres = `<div style="font-family:${api.TEXTO}; font-weight:700; font-size:${fs}px; line-height:1.04; color:${cNombre}; text-transform:uppercase; letter-spacing:0.02em; overflow:hidden; max-height:${Math.round(fs * 3.2)}px;">${esc(opts[0])}</div>`;
         } else {
             nombres = opts.map((nom, k) => {
-                const fs = ajustar(nom + (k < n - 1 ? ' /' : ''), n > 2 ? 10.5 : 13, textoAncho, 0.5);
-                return `<div style="font-family:${api.TEXTO}; font-weight:700; font-size:${px(fs)}; line-height:${n > 2 ? 1 : 1.08}; color:#fff; text-transform:uppercase; letter-spacing:0.02em; white-space:nowrap;">${esc(nom)}${k < n - 1 ? `<span style="color:${P.tenue};"> /</span>` : ''}</div>`;
+                const fs = ajustar(nom + (k < n - 1 ? ' /' : ''), n > 2 ? 10.5 : 13, tAncho, 0.5);
+                return `<div style="font-family:${api.TEXTO}; font-weight:700; font-size:${px(fs)}; line-height:${n > 2 ? 1 : 1.08}; color:${cNombre}; text-transform:uppercase; letter-spacing:0.02em; white-space:nowrap;">${esc(nom)}${k < n - 1 ? `<span style="color:${P.tenue};"> /</span>` : ''}</div>`;
             }).join('');
         }
-        return `<div style="height:${rowH}px; display:flex; align-items:center; gap:6px; padding:0 7px 0 8px; box-sizing:border-box;">${escudos}<div style="flex:1; min-width:0;">${seed}${nombres}</div></div>`;
+        const marcador = marcadorHtml(st, o, elim);
+        return `<div style="height:${rowH}px; display:flex; align-items:center; gap:6px; padding:0 ${conGol ? 4 : 7}px 0 8px; box-sizing:border-box;${elim ? ' background:rgba(0,0,0,0.38);' : ''}">${escudos}<div style="flex:1; min-width:0;">${seed}${nombres}</div>${marcador}</div>`;
     }
 
     function htmlCruce(b, i, total, c, f) {
@@ -270,7 +360,7 @@ FINAL – 14:00 Hs`;
         const top = y0 + 8 + Math.max(0, (ba - Hb) / 2);
         const cA = top + ch / 2, cC = top + ch + gp + ch / 2, yc = (cA + cC) / 2;
         const conEscudos = !!c.escudoDe;
-        const o = { P, A, rowH, textoAncho: QW - 15 - (conEscudos ? 40 : 0), conEscudos, escudoDe: c.escudoDe };
+        const o = { P, A, rowH, soloEscudos: !!c.soloEscudos, textoAncho: QW - 15 - (conEscudos ? 40 : 0), conEscudos, escudoDe: c.escudoDe };
 
         const linea = (x, y, w, h, col) => `<div style="position:absolute; left:${px(x)}; top:${px(y)}; width:${px(w)}; height:${px(h)}; background:${col || P.linea};"></div>`;
         const hL = (x, y, w, col) => linea(x, y - 0.75, w, 1.5, col);
@@ -278,18 +368,42 @@ FINAL – 14:00 Hs`;
 
         // ----- Fondo: oscuro, con foco de estadio, césped rayado y líneas de cancha muy tenues -----
         const yPie = Hh - inf - FOOT;
-        const fondo = `
-            <div style="position:absolute; inset:0; background:linear-gradient(180deg, ${P.top} 0%, ${P.mid} 55%, ${P.bot} 100%);"></div>
-            <div style="position:absolute; inset:0; background:repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 45px, rgba(255,255,255,0) 45px, rgba(255,255,255,0) 90px);"></div>
-            <div style="position:absolute; inset:0; background:radial-gradient(ellipse 75% 46% at 50% 0%, ${P.foco}, rgba(0,0,0,0) 72%);"></div>
-            <svg style="position:absolute; left:0; top:0;" width="${W}" height="${Hh}" viewBox="0 0 ${W} ${Hh}" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#fff" stroke-opacity="0.075" stroke-width="1.6">
+
+        // ----- Patrón de fondo según el diseño (todo en CSS/SVG simple, se exporta bien a PNG) -----
+        const pat = P.patron || 'cancha';
+        const blanco = (o) => `rgba(255,255,255,${o})`;
+        const capaRayos = () => {
+            const n = 11, cxr = W / 2, largo = Hh * 1.25;
+            const rayos = Array.from({ length: n }, (_, k) => {
+                const ang = (-72 + (144 / (n - 1)) * k) * Math.PI / 180;
+                const w = 0.045 + (k % 2) * 0.02;
+                const p = (a) => `${px(cxr + Math.sin(a) * largo)},${px(sup + Math.cos(a) * largo)}`;
+                return `<polygon points="${cxr},${sup} ${p(ang - w)} ${p(ang + w)}" fill="url(#cr-ray)"/>`;
+            }).join('');
+            return `<svg style="position:absolute; left:0; top:0;" width="${W}" height="${Hh}" viewBox="0 0 ${W} ${Hh}" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="cr-ray" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.16"/><stop offset="0.55" stop-color="#fff" stop-opacity="0.035"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>${rayos}</svg>`;
+        };
+        const capaHex = () => `<svg style="position:absolute; left:0; top:0;" width="${W}" height="${Hh}" viewBox="0 0 ${W} ${Hh}" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="cr-hex" width="56" height="100" patternUnits="userSpaceOnUse" patternTransform="scale(0.62)"><path d="M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100" fill="none" stroke="#fff" stroke-opacity="0.10" stroke-width="1.6"/><path d="M28 0L28 34L0 50L0 84L28 100L56 84L56 50L28 34" fill="none" stroke="#fff" stroke-opacity="0.10" stroke-width="1.6"/></pattern></defs><rect width="${W}" height="${Hh}" fill="url(#cr-hex)"/></svg>`;
+        const capaPatron = pat === 'cancha'
+            ? `<div style="position:absolute; inset:0; background:repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 45px, rgba(255,255,255,0) 45px, rgba(255,255,255,0) 90px);"></div>`
+            : pat === 'diagonal'
+                ? `<div style="position:absolute; inset:0; background:repeating-linear-gradient(135deg, ${blanco(0.045)} 0px, ${blanco(0.045)} 2px, ${blanco(0)} 2px, ${blanco(0)} 24px);"></div>`
+                : pat === 'puntos'
+                    ? `<div style="position:absolute; inset:0; background-image:radial-gradient(${blanco(0.13)} 1.3px, ${blanco(0)} 1.9px); background-size:20px 20px;"></div>`
+                    : pat === 'hex' ? capaHex() : capaRayos();
+        const lineasCancha = (completa) => `<svg style="position:absolute; left:0; top:0;" width="${W}" height="${Hh}" viewBox="0 0 ${W} ${Hh}" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#fff" stroke-opacity="0.075" stroke-width="1.6">
                 <circle cx="${W / 2}" cy="${yc}" r="112"/>
                 <circle cx="${W / 2}" cy="${yc}" r="3.5" fill="#fff" fill-opacity="0.12" stroke="none"/>
                 <line x1="0" y1="${yc}" x2="${W}" y2="${yc}"/>
-                <rect x="${W / 2 - 138}" y="${yPie - 96}" width="276" height="96"/>
+                ${completa ? `<rect x="${W / 2 - 138}" y="${yPie - 96}" width="276" height="96"/>
                 <rect x="${W / 2 - 64}" y="${yPie - 38}" width="128" height="38"/>
-                <path d="M${W / 2 - 54} ${yPie - 96} A54 54 0 0 1 ${W / 2 + 54} ${yPie - 96}"/>
-            </svg>
+                <path d="M${W / 2 - 54} ${yPie - 96} A54 54 0 0 1 ${W / 2 + 54} ${yPie - 96}"/>` : ''}
+            </svg>`;
+        const capaLineas = pat === 'cancha' ? lineasCancha(true) : (pat === 'diagonal' || pat === 'puntos') ? lineasCancha(false) : '';
+        const fondo = `
+            <div style="position:absolute; inset:0; background:linear-gradient(180deg, ${P.top} 0%, ${P.mid} 55%, ${P.bot} 100%);"></div>
+            ${capaPatron}
+            <div style="position:absolute; inset:0; background:radial-gradient(ellipse 75% 46% at 50% 0%, ${P.foco}, rgba(0,0,0,0) 72%);"></div>
+            ${capaLineas}
             <div style="position:absolute; inset:0; background:radial-gradient(ellipse 90% 75% at 50% 45%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.55) 100%);"></div>
             <div style="position:absolute; left:0; top:${sup}px; width:100%; height:3px; background:linear-gradient(90deg, ${A.b}, ${A.a} 40%, rgba(255,255,255,0) 100%);"></div>`;
 
@@ -313,30 +427,70 @@ FINAL – 14:00 Hs`;
         // ----- Cruces -----
         const tarjeta = (letra, x, ytop) => {
             const q = b.qf[letra];
+            const r = resolverCruce(b.res && b.res[letra]) || resolverPasa(b, letra);
             return `<div style="position:absolute; left:${px(x)}; top:${px(ytop)}; width:${QW}px; height:${ch}px; border:1px solid ${P.borde}; border-left:3px solid ${A.b}; border-radius:3px; background:${P.caja}; overflow:hidden; box-sizing:border-box; box-shadow:0 6px 18px rgba(0,0,0,0.35);">
-                <div>${ladoHtml(q && q.a, o)}</div>
+                <div>${ladoHtml(q && q.a, o, r && { gol: r.a, pen: r.penA, elim: r.elim === 'a', gana: r.elim === 'b' })}</div>
                 <div style="position:relative; height:${vsH}px; background:${P.tira}; display:flex; align-items:center; justify-content:center; font-family:${api.TEXTO}; font-weight:700; font-size:10px; letter-spacing:0.24em; color:${P.tenue};">
                     <span style="position:absolute; left:7px; font-family:${api.TITULAR}; font-size:13px; letter-spacing:0.05em; color:${A.b};">${esc(letra)}</span>VS
                 </div>
-                <div>${ladoHtml(q && q.b, o)}</div>
+                <div>${ladoHtml(q && q.b, o, r && { gol: r.b, pen: r.penB, elim: r.elim === 'b', gana: r.elim === 'a' })}</div>
             </div>
             ${b.hor[letra] ? `<div style="position:absolute; left:${px(x)}; width:${QW}px; top:${px(ytop + ch + 5)}; text-align:center; font-family:${api.TEXTO}; font-weight:700; font-size:10.5px; letter-spacing:0.09em; line-height:1; white-space:nowrap;">${horarioHtml(b.hor[letra], A, P)}</div>` : ''}`;
         };
         const slot = (x, y, w, h, txt, col) => `<div style="position:absolute; left:${px(x)}; top:${px(y)}; width:${px(w)}; height:${px(h)}; border:1px solid ${col || P.borde}; background:${P.caja}; border-radius:3px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; text-align:center; font-family:${api.TEXTO}; font-weight:700; font-size:10px; letter-spacing:0.1em; color:${P.tenue}; line-height:1.1;">${txt}</div>`;
         const vsMini = (x, y, w, h) => `<div style="position:absolute; left:${px(x)}; top:${px(y)}; width:${px(w)}; height:${px(h)}; display:flex; align-items:center; justify-content:center; font-family:${api.TEXTO}; font-weight:700; font-size:9px; letter-spacing:0.2em; color:${P.tenue};">VS</div>`;
 
+        // Ganador de un cuarto ya definido (por resultado o por "PASA"): nombre del equipo que avanza, o null si falta jugar
+        const ganador = (letra) => {
+            const q = b.qf[letra];
+            if (!q) return null;
+            const r = resolverCruce(b.res && b.res[letra]) || resolverPasa(b, letra);
+            if (!r || !r.elim) return null;
+            const lado = r.elim === 'a' ? q.b : q.a;
+            return lado.opts.length === 1 ? lado.opts[0] : ((b.pasa && b.pasa[letra]) || null);
+        };
+        // Casillero de semifinal: "GAN. A" si falta definir; si ya pasó alguien, su escudo (y nombre, salvo en modo solo escudos)
+        const slotGan = (x, y, w, h, letra) => {
+            const nom = ganador(letra);
+            if (!nom) return slot(x, y, w, h, `GAN. ${esc(letra)}`);
+            const solo = conEscudos && o.soloEscudos;
+            const tam = solo ? 28 : 20;
+            let pieza = '';
+            if (conEscudos) {
+                const u = c.escudoDe(nom);
+                pieza = u
+                    ? `<img src="${u}" alt="" draggable="false" style="width:${tam}px; height:${tam}px; object-fit:contain; display:block;" />`
+                    : `<div style="width:${tam}px; height:${tam}px; border-radius:9999px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.28); box-sizing:border-box; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:${Math.round(tam * 0.38)}px; letter-spacing:0; color:rgba(255,255,255,0.75); line-height:1;">${esc(siglas(nom))}</div>`;
+            }
+            const palMax = Math.max(...nom.split(/\s+/).map(w => w.length), 1);
+            const fs = Math.max(6.5, Math.min(conEscudos ? 8 : 10, (w - 6) / (palMax * 0.62)));
+            const nombre = solo ? '' : `<div style="font-size:${px(fs)}; line-height:1.05; letter-spacing:0.02em; color:#fff; text-transform:uppercase; max-height:${Math.round(fs * 2.2)}px; overflow:hidden;">${esc(nom)}</div>`;
+            return slot(x, y, w, h, `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; width:100%;">${pieza}${nombre}</div>`, A.b);
+        };
         const [semiIzq, semiDer] = b.semis;
+        // Semifinal con local definido: ese equipo va primero (arriba). Solo cambia el orden de los casilleros de la semi; los cuartos quedan donde están.
+        const ordenSemi = (par, nombre) => {
+            const t = norm(nombre || '');
+            if (!t) return par;
+            const toca = (n) => { const x = norm(n || ''); return !!x && (x.includes(t) || t.includes(x)); };
+            const puntaje = (letra) => {
+                if (toca(ganador(letra))) return 2;
+                const q = b.qf[letra];
+                return q && [q.a, q.b].some(l => l.opts.some(toca)) ? 1 : 0;
+            };
+            return puntaje(par[1]) > puntaje(par[0]) ? [par[1], par[0]] : par;
+        };
         const xQI = M, xQD = W - M - QW;
         const xSI = M + QW + g, xSD = W - M - QW - g - SW;
         const jI = M + QW + g / 2, jD = W - M - QW - g / 2;
         const cx0 = M + QW + g + SW + g;
-        const sh = 24, shVs = 14, shT = sh * 2 + shVs;
+        const sh = 38, shVs = 14, shT = sh * 2 + shVs;
 
         const semiBox = (x, par, n, h) => `
             <div style="position:absolute; left:${px(x - 16)}; width:${SW + 32}px; top:${px(yc - shT / 2 - 15)}; text-align:center; font-family:${api.TEXTO}; font-weight:700; font-size:9.5px; letter-spacing:0.14em; color:${A.b}; white-space:nowrap;">SEMIFINAL ${n}</div>
-            ${slot(x, yc - shT / 2, SW, sh, `GAN. ${esc(par[0])}`)}
+            ${slotGan(x, yc - shT / 2, SW, sh, par[0])}
             ${vsMini(x, yc - shT / 2 + sh, SW, shVs)}
-            ${slot(x, yc + shT / 2 - sh, SW, sh, `GAN. ${esc(par[1])}`)}
+            ${slotGan(x, yc + shT / 2 - sh, SW, sh, par[1])}
             ${h ? `<div style="position:absolute; left:${px(x - 16)}; width:${SW + 32}px; top:${px(yc + shT / 2 + 6)}; text-align:center; font-family:${api.TEXTO}; font-weight:700; font-size:10px; letter-spacing:0.08em; line-height:1.25; white-space:nowrap;"><div style="color:#fff;">${esc(fmtFecha(h))}</div><div style="color:${A.b};">${esc(h.hora || '')}</div></div>` : ''}`;
 
         const cruces = `
@@ -346,8 +500,8 @@ FINAL – 14:00 Hs`;
             ${tarjeta(semiDer[1], xQD, top + ch + gp)}
             ${hL(M + QW, cA, g / 2 + 1)}${hL(M + QW, cC, g / 2 + 1)}${vL(jI, cA, cC - cA)}${hL(jI, yc, g / 2)}${hL(xSI + SW, yc, g, A.b)}
             ${hL(jD, cA, g / 2 + 1)}${hL(jD, cC, g / 2 + 1)}${vL(jD, cA, cC - cA)}${hL(xSD + SW, yc, g / 2)}${hL(W - cx0, yc, g, A.b)}
-            ${semiBox(xSI, semiIzq, 1, b.semisHor[0])}
-            ${semiBox(xSD, semiDer, 2, b.semisHor[1])}`;
+            ${semiBox(xSI, ordenSemi(semiIzq, (b.semisLocal || [])[0]), 1, b.semisHor[0])}
+            ${semiBox(xSD, ordenSemi(semiDer, (b.semisLocal || [])[1]), 2, b.semisHor[1])}`;
 
         // ----- Final + copa -----
         const fh = 44, fw = (CW - 24) / 2;
@@ -392,7 +546,7 @@ FINAL – 14:00 Hs`;
         const escudoDe = hayEscudos ? api.escudoDe() : null;
         if (hayEscudos) api.precargarEscudos().then(cambio => { if (cambio) api.renderDiferido(false); });
         const total = llaves.length;
-        const contexto = { paleta: e.paleta, titulo: e.titulo, torneo: e.torneo, pie: e.pie, logo: api.logo(), escudoDe };
+        const contexto = { paleta: e.paleta, titulo: e.titulo, torneo: e.torneo, pie: e.pie, logo: api.logo(), escudoDe, soloEscudos: !!e.soloEscudos };
         const htmls = llaves.map((b, i) => htmlCruce(b, i, total, contexto, f));
 
         // Avisos: renglones que no se entendieron + equipos sin escudo
@@ -448,6 +602,7 @@ FINAL – 14:00 Hs`;
         api.$('cr-torneo').value = e.torneo;
         api.$('cr-pie').value = e.pie;
         api.$('cr-chk-escudos').checked = api.estado.usarEscudos !== false;
+        api.$('cr-chk-solo').checked = !!e.soloEscudos;
         construirTiles();
     }
 
@@ -471,6 +626,7 @@ FINAL – 14:00 Hs`;
             const otro = api.$('chk-escudos'); if (otro) otro.checked = ev.target.checked;
             cambiar();
         });
+        api.$('cr-chk-solo').addEventListener('change', (ev) => { e.soloEscudos = ev.target.checked; cambiar(); });
         api.$('cr-tiles-paleta').addEventListener('click', (ev) => {
             const b = ev.target.closest('[data-cr-paleta]'); if (!b) return;
             e.paleta = b.dataset.crPaleta; construirTiles(); cambiar();
