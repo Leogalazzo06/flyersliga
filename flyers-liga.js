@@ -235,9 +235,9 @@ function parsearFila(linea) {
         hora = horaDe(mh[1], mh[2]);
         t = mh[3].trim();
     }
-    // Nota entre paréntesis al final: "(PROGRESISTA)"
+    // Nota entre paréntesis al final: "(PROGRESISTA)". Un paréntesis solo con número, como "(3)", son penales y no una cancha
     const mn = t.match(/\s*\(([^)]{1,30})\)\s*$/);
-    if (mn) { nota = mn[1].replace(/^(cancha|sede|en|local)\s*[:\-]?\s+/i, '').trim(); t = t.slice(0, mn.index).trim(); }
+    if (mn && !/^\d{1,2}$/.test(mn[1].trim())) { nota = mn[1].replace(/^(cancha|sede|en|local)\s*[:\-]?\s+/i, '').trim(); t = t.slice(0, mn.index).trim(); }
     // Estado al final: PENDIENTE, PEN, A CONFIRMAR...
     const me = t.match(RE_ESTADO_FIN);
     if (me && me.index > 0) { pend = etiquetaEstado(me[1]); t = t.slice(0, me.index).trim(); }
@@ -352,11 +352,16 @@ function parsearResultados(texto) {
     const bloques = parsearProgramacion(texto);
     bloques.forEach(b => b.filas.forEach(f => {
         if (!f.l || !f.v) return;
-        const ml = f.l.match(/^(.*\S)\s+\(?(\d{1,2})\)?$/);
-        const mv = f.v.match(/^(.*\S)\s+\(?(\d{1,2})\)?$/);
+        // Con penales: "Mara FC 0 (3)" -> goles 0, penales 3. Sin penales: "Mara FC 0" (o "Mara FC (0)")
+        const RE_PEN = /^(.*\S)\s+(\d{1,2})\s*\(\s*(\d{1,2})\s*\)$/;
+        const RE_GOL = /^(.*\S)\s+\(?(\d{1,2})\)?$/;
+        const ml = f.l.match(RE_PEN) || f.l.match(RE_GOL);
+        const mv = f.v.match(RE_PEN) || f.v.match(RE_GOL);
         if (!ml || !mv) return;   // sin los dos marcadores se deja como partido sin resultado
         f.l = ml[1].trim(); f.gl = Number(ml[2]);
         f.v = mv[1].trim(); f.gv = Number(mv[2]);
+        // Penales: solo si los dos equipos los traen
+        if (ml[3] != null && mv[3] != null) { f.pl = Number(ml[3]); f.pv = Number(mv[3]); }
     }));
     return bloques;
 }
@@ -544,8 +549,11 @@ function itemHtml(it, sc, ctx) {
             <span style="font-family:${TEXTO}; font-weight:800; font-size:${px(tam)}; line-height:1; color:${COLOR.tinta}; text-transform:uppercase; letter-spacing:0.02em; white-space:nowrap;">${esc(it.texto)}</span></div>`;
     }
     const columnas = 3 + (ctx.hayDia ? 1 : 0) + (ctx.hayHora ? 1 : 0);
-    const wVs = ctx.hayRes ? 70 : 38;   // ancho de la columna central (VS o marcador)
+    const wVs = ctx.hayRes ? (ctx.hayPen ? 104 : 70) : 38;   // ancho de la columna central (VS o marcador)
     const conMarcador = it.gl != null && it.gv != null;
+    const conPen = conMarcador && it.pl != null && it.pv != null;   // definido por penales
+    const penTxt = (n) => `<span style="font-size:0.72em; letter-spacing:0;">(${n})</span>`;
+    const textoMarcador = conPen ? `${it.gl} ${penTxt(it.pl)} - ${penTxt(it.pv)} ${it.gv}` : `${it.gl} - ${it.gv}`;
     const reservado = (ctx.hayDia ? wDia : 0) + (ctx.hayHora ? wHora : 0);
     // Escudo: cuadrado fijo junto al "VS" (se reserva el lugar aunque falte, para que los nombres queden alineados)
     const escT = ctx.hayEscudos ? Math.round(H.fila * sc - 6) : 0;
@@ -572,7 +580,7 @@ function itemHtml(it, sc, ctx) {
             ${dia}${hora}
             ${nombre(it.l, 'right')}
             <div style="display:flex; justify-content:center;">${conMarcador
-                ? `<span style="font-family:${TITULAR}; font-size:${px(18 * sc * DENS.fs)}; line-height:1; color:${COLOR.chipTexto}; background:${COLOR.celeste}; border-radius:${TEMA.chip === 'pildora' ? '9999px' : '6px'}; padding:4px 9px 3px; letter-spacing:0.06em; white-space:nowrap;">${it.gl} - ${it.gv}</span>`
+                ? `<span style="font-family:${TITULAR}; font-size:${px(18 * sc * DENS.fs)}; line-height:1; color:${COLOR.chipTexto}; background:${COLOR.celeste}; border-radius:${TEMA.chip === 'pildora' ? '9999px' : '6px'}; padding:4px 9px 3px; letter-spacing:0.06em; white-space:nowrap;">${textoMarcador}</span>`
                 : `<span style="font-family:${TITULAR}; font-size:${px(12 * sc * DENS.fs)}; line-height:1; color:${COLOR.acento}; background:${COLOR.chipBg}; border:1.5px solid ${COLOR.celesteSuave}; border-radius:9999px; padding:3px 6px 2px; letter-spacing:0.05em;">VS</span>`}</div>
             ${nombre(it.v, 'left')}
         </div>${sede}
@@ -602,6 +610,7 @@ function htmlFlyer(pag, i, total, c) {
         hayHora: pag.items.some(it => it.t === 'fila' && it.hora),
         hayDia: pag.items.some(it => it.t === 'fila' && it.dia),
         hayRes: pag.items.some(it => it.t === 'fila' && it.gl != null),
+        hayPen: pag.items.some(it => it.t === 'fila' && it.pl != null),
         anchoUtil: f.ancho - MARGEN * 2,
         escudoDe: c.escudoDe || null,
         hayEscudos: !!c.hayEscudos,
