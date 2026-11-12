@@ -1238,6 +1238,7 @@ function renderFlyers() {
             <div class="flex gap-2">
                 <button type="button" data-ver="${i}" class="btn-sec">Ampliar</button>
                 <button type="button" data-descargar="${i}" class="btn-sec">Descargar ${i + 1}/${total}</button>
+                <button type="button" data-imprimir="${i}" class="btn-sec">Imprimir</button>
             </div>
         </div>`).join('');
 
@@ -1407,6 +1408,53 @@ async function descargar(indices, boton) {
             console.error('Error exportando los flyers:', err);
             mostrarToast('No se pudo generar la imagen. Probá de nuevo.', 'error');
         }
+    } finally {
+        boton.disabled = false;
+        boton.textContent = label;
+    }
+}
+
+// ---------- Impresión directa (sin descargar el PNG) ----------
+// Arma las imágenes del flyer, las pone una por hoja en un marco oculto y abre el diálogo de impresión del navegador.
+function imprimirImagenes(urls) {
+    return new Promise((resolve) => {
+        const viejo = document.getElementById('marco-imprimir');
+        if (viejo) viejo.remove();
+        const marco = document.createElement('iframe');
+        marco.id = 'marco-imprimir';
+        marco.setAttribute('aria-hidden', 'true');
+        marco.style.cssText = 'position:fixed; right:0; bottom:0; width:0; height:0; border:0; visibility:hidden;';
+        document.body.appendChild(marco);
+        const doc = marco.contentWindow.document;
+        doc.open();
+        doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>Flyers A.F.O.CH</title><style>
+            @page { margin: 8mm; }
+            html, body { margin: 0; padding: 0; }
+            .hoja { width: 100%; height: 99vh; display: flex; align-items: center; justify-content: center; break-after: page; page-break-after: always; }
+            .hoja:last-child { break-after: auto; page-break-after: auto; }
+            img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+        </style></head><body>${urls.map(u => `<div class="hoja"><img src="${u}" alt=""></div>`).join('')}</body></html>`);
+        doc.close();
+        const pendientes = [...doc.images].map(im => (im.complete ? null : new Promise(r => { im.onload = im.onerror = r; })));
+        Promise.all(pendientes).then(() => {
+            marco.contentWindow.focus();
+            marco.contentWindow.print();
+            resolve();
+        });
+    });
+}
+
+async function imprimir(indices, boton) {
+    const label = boton.textContent;
+    boton.disabled = true;
+    boton.textContent = 'Preparando…';
+    try {
+        const archivos = await generarArchivos(indices);
+        if (!archivos.length) throw new Error('No hay flyers para imprimir.');
+        await imprimirImagenes(archivos.map(a => a.dataUrl));
+    } catch (err) {
+        console.error('Error preparando la impresión:', err);
+        mostrarToast('No se pudo preparar la impresión. Probá de nuevo.', 'error');
     } finally {
         boton.disabled = false;
         boton.textContent = label;
@@ -1906,6 +1954,7 @@ async function renderArb(lista = true) {
             <div class="flex gap-2">
                 <button type="button" data-ver="${i}" class="btn-sec">Ampliar</button>
                 <button type="button" data-descargar="${i}" class="btn-sec">Descargar ${i + 1}/${total}</button>
+                <button type="button" data-imprimir="${i}" class="btn-sec">Imprimir</button>
             </div>
         </div>`).join('');
 
@@ -2590,7 +2639,7 @@ async function iniciar() {
     iniciarImageKitUI();
     if (window.tablaLiga) window.tablaLiga.iniciar({
         estado, $, guardarEstado, esc, crearBuscador, parsearProgramacion, htmlFlyer, aplicarDiseno, alturaUtil, H, TEXTO, TITULAR, FORMATOS, DISENOS,
-        precargarEscudos, renderDiferido, abrirVisor, descargar,
+        precargarEscudos, renderDiferido, abrirVisor, descargar, imprimir,
         color: () => COLOR, tema: () => TEMA, logo: logoActual, toast: mostrarToast,
         slug: (t) => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tabla',
         escudoDe: () => { const b = crearBuscador(estado.equipos); return (n) => { const e = b(n); const u = (e && e.escudo) || ''; return cacheEscudos.get(u) || u; }; },
@@ -2624,6 +2673,30 @@ async function iniciar() {
     $('visor-prev').addEventListener('click', () => { visorIdx--; pintarVisor(); });
     $('visor-next').addEventListener('click', () => { visorIdx++; pintarVisor(); });
     $('visor-desc').addEventListener('click', (e) => { if (visorIdx >= 0) descargar([visorIdx], e.currentTarget); });
+    $('visor-imp').addEventListener('click', (e) => { if (visorIdx >= 0) imprimir([visorIdx], e.currentTarget); });
+    // Botón Imprimir de cada flyer (vale para Flyers, Resultados y Árbitros)
+    document.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-imprimir]');
+        if (b) imprimir([Number(b.dataset.imprimir)], b);
+    });
+    // "Imprimir todos" junto a cada "Descargar todos" (Flyers/Resultados, Árbitros, Posiciones y Cruces)
+    ['btn-todos', 'btn-todos-arb', 'btn-tb-todos', 'cr-btn-todos'].forEach(id => {
+        const bd = document.getElementById(id);
+        if (!bd) return;
+        const grupo = document.createElement('div');
+        grupo.className = 'flex items-center gap-2 flex-wrap';
+        bd.parentNode.insertBefore(grupo, bd);
+        const bi = document.createElement('button');
+        bi.type = 'button';
+        bi.className = 'btn-sec !py-2.5';
+        bi.textContent = id.endsWith('arb') || id === 'btn-tb-todos' ? 'Imprimir todas' : 'Imprimir todos';
+        bi.addEventListener('click', (e) => {
+            if (!flyersActuales.length) { mostrarToast('No hay nada para imprimir todavía.', 'error'); return; }
+            imprimir(flyersActuales.map((_, i) => i), e.currentTarget);
+        });
+        grupo.appendChild(bi);
+        grupo.appendChild(bd);
+    });
     document.addEventListener('keydown', (e) => {
         if (visorIdx < 0) return;
         if (e.key === 'Escape') cerrarVisor();
