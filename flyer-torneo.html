@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flyer de torneos | Liga A.F.O.CH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800&family=Bebas+Neue&family=Anton&family=Teko:wght@400;600&family=Staatliches&family=Archivo+Black&family=Russo+One&family=Alfa+Slab+One&family=Bowlby+One&family=Barlow+Condensed:wght@500;600;700;800&family=Oswald:wght@500;700&family=Montserrat:wght@600;800&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js"></script>
+<!-- Opcional: si está junto a este archivo, Bebas Neue y Barlow Condensed salen incrustadas (igual que en los otros flyers) -->
+<script src="fuentes-liga.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#f1f5f9;color:#0f172a}
+.hd{background:linear-gradient(110deg,#0673C8,#35A7EA);color:#fff;padding:14px 20px}
+.hd h1{margin:0;font-size:18px;font-weight:800;font-style:italic;text-transform:uppercase}
+.hd p{margin:4px 0 0;font-size:11px;font-weight:600;opacity:.9}
+main{max-width:1180px;margin:0 auto;padding:16px;display:grid;gap:16px;grid-template-columns:minmax(0,400px) minmax(0,1fr);align-items:start}
+@media(max-width:820px){main{grid-template-columns:1fr}}
+section{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:14px;margin-bottom:12px}
+h2{margin:0 0 10px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em}
+h3{margin:12px 0 6px;font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.1em}
+label{display:block;font-size:11px;font-weight:800;color:#334155;margin-bottom:8px}
+input[type=text],textarea{width:100%;margin-top:4px;border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;font:600 13px 'Plus Jakarta Sans',sans-serif;background:#f8fafc;color:#0f172a}
+input[type=range]{width:100%;accent-color:#0673C8}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:8px 10px;border:2px solid #e2e8f0;border-radius:12px;background:#fff;cursor:pointer;font:800 12px 'Plus Jakarta Sans',sans-serif;color:#0f172a}
+.tile small{font-size:10px;font-weight:600;color:#94a3b8}
+.tile.on{border-color:#0673C8;background:#eff8ff}
+.sw{display:block;width:100%;height:24px;border-radius:6px;position:relative;margin-bottom:4px}
+.sw b{position:absolute;left:6px;right:6px;bottom:4px;height:5px;border-radius:3px}
+.btn{display:inline-block;font:800 12px 'Plus Jakarta Sans',sans-serif;padding:8px 14px;border-radius:99px;border:1px solid #cbd5e1;background:#fff;color:#475569;cursor:pointer}
+.btn.p{background:#0673C8;border-color:#0673C8;color:#fff;font-size:13px;padding:11px 22px}
+.btn:disabled{opacity:.55}
+.ck{display:inline-flex;align-items:center;gap:6px;margin:0 14px 0 0}
+.vw{position:sticky;top:12px;display:flex;flex-direction:column;align-items:center;gap:12px}
+#pv>div{border-radius:10px;overflow:hidden;box-shadow:0 8px 28px rgba(15,23,42,.25)}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);padding:10px 16px;border-radius:99px;color:#fff;font-size:12px;font-weight:700;background:#0b3a66;display:none}
+</style>
+</head>
+<body>
+<div class="hd"><h1>Flyer de torneos</h1><p>Liga A.F.O.CH · torneos de verano · descargá en PNG 1080 px</p></div>
+<main>
+<div>
+  <section><h2>Textos</h2>
+    <label>Etiqueta (junto al logo)<input type="text" data-k="tag"></label>
+    <label>Título (una línea por renglón)<textarea data-k="titulo" rows="2"></textarea></label>
+    <label>Cinta<input type="text" data-k="cinta"></label>
+    <label>Fecha destacada<input type="text" data-k="fecha"></label>
+    <label>Datos (uno por renglón; con “Etiqueta: valor” queda en color)<textarea data-k="datos" rows="4"></textarea></label>
+    <label>Información extra (cuadros chicos, “Etiqueta: valor”)<textarea data-k="extra" rows="2"></textarea></label>
+    <label>Texto grande de fondo<input type="text" data-k="marca"></label>
+    <label style="margin:0">Pie (inscripciones / contacto)<input type="text" data-k="pie"></label>
+  </section>
+  <section><h2>Diseño de verano</h2><div id="t-tema" class="g"></div></section>
+  <section><h2>Imagen de fondo</h2>
+    <label class="btn" style="margin:0 6px 10px 0">Subir imagen<input id="fbg" type="file" accept="image/*" hidden></label>
+    <button type="button" class="btn" id="qbg">Quitar</button>
+    <label>Oscurecer / teñir<input type="range" min="0" max="80" data-k="ov"></label>
+    <label>Zoom<input type="range" min="100" max="250" data-k="zoom"></label>
+    <label>Posición horizontal<input type="range" min="0" max="100" data-k="px"></label>
+    <label style="margin:0">Posición vertical<input type="range" min="0" max="100" data-k="py"></label>
+  </section>
+  <section><h2>Tipografías</h2>
+    <h3 style="margin-top:0">Título</h3><div id="t-ft" class="g"></div>
+    <h3>Textos</h3><div id="t-fx" class="g"></div>
+  </section>
+  <section><h2>Elementos de fútbol</h2>
+    <label class="ck"><input type="checkbox" data-k="pelota"> Pelota</label>
+    <label class="ck"><input type="checkbox" data-k="cesped"> Césped / arena</label>
+    <label class="ck"><input type="checkbox" data-k="sol"> Rayos de luz</label>
+  </section>
+  <section><h2>Formato</h2><div id="t-fmt" class="g"></div></section>
+  <section><h2>Logo</h2>
+    <label class="btn" style="margin:0 6px 8px 0">Subir logo<input id="flogo" type="file" accept="image/*" hidden></label>
+    <button type="button" class="btn" id="qlogo">Quitar</button>
+    <label>Tamaño<input type="range" min="40" max="130" data-k="ltam"></label><div id="t-lpos" class="g" style="grid-template-columns:repeat(3,1fr);margin-bottom:10px"></div><label class="ck"><input type="checkbox" data-k="lfondo"> Fondo blanco circular</label>
+    <p style="margin:8px 0 0;font-size:10px;font-weight:600;color:#94a3b8">Si dejás afoch-logo.png junto a este archivo, se usa solo.</p>
+  </section>
+</div>
+<div class="vw"><button type="button" class="btn p" id="dl">Descargar PNG</button><div id="pv"></div></div>
+</main>
+<div id="ex" style="position:fixed;left:-20000px;top:0;pointer-events:none" aria-hidden="true"></div>
+<div id="toast"></div>
+<script>
+const $=id=>document.getElementById(id);
+const TEMAS={
+ oro:{n:'Negro y oro',a:'#0D0D0D',b:'#2A2108',t1:'#FFFFFF',t2:'#F5B700',sh:'rgba(0,0,0,.6)',cin:'#F5B700',cinT:'#0D0D0D',g1:'#14532D',g2:'#0F4424',ac:'#F5B700',acT:'#0D0D0D',hi:'#F5B700',card:'rgba(255,255,255,.08)'},
+ mar:{n:'Azul mar',a:'#06182E',b:'#0A5CA8',t1:'#FFFFFF',t2:'#7DD3FC',sh:'rgba(0,0,0,.5)',cin:'#7DD3FC',cinT:'#06182E',g1:'#C9A66B',g2:'#B8955A',ac:'#FFFFFF',acT:'#06182E',hi:'#7DD3FC',card:'rgba(255,255,255,.08)'},
+ atardecer:{n:'Atardecer',a:'#12122B',b:'#C2410C',t1:'#FFFFFF',t2:'#FDBA74',sh:'rgba(0,0,0,.5)',cin:'#FDBA74',cinT:'#12122B',g1:'#14532D',g2:'#0F4424',ac:'#FFFFFF',acT:'#12122B',hi:'#FDBA74',card:'rgba(0,0,0,.35)'},
+ noche:{n:'Noche de verano',a:'#050B16',b:'#0E2A4F',t1:'#FFFFFF',t2:'#C6FF3D',sh:'rgba(0,0,0,.5)',cin:'#C6FF3D',cinT:'#050B16',g1:'#166534',g2:'#115228',ac:'#C6FF3D',acT:'#050B16',hi:'#C6FF3D',card:'rgba(255,255,255,.08)'},
+ cancha:{n:'Verde cancha',a:'#0B2E1A',b:'#14532D',t1:'#FFFFFF',t2:'#FACC15',sh:'rgba(0,0,0,.5)',cin:'#FACC15',cinT:'#0B2E1A',g1:'#1E7A3E',g2:'#186833',ac:'#FFFFFF',acT:'#0B2E1A',hi:'#FACC15',card:'rgba(0,0,0,.35)'}
+};
+const FT={'Bebas Neue':'Bebas+Neue','Anton':'Anton','Teko':'Teko:wght@400;600','Staatliches':'Staatliches','Archivo Black':'Archivo+Black','Russo One':'Russo+One','Alfa Slab One':'Alfa+Slab+One','Bowlby One':'Bowlby+One'};
+const FX={'Barlow Condensed':'Barlow+Condensed:wght@500;600;700;800','Oswald':'Oswald:wght@500;700','Montserrat':'Montserrat:wght@600;800','Poppins':'Poppins:wght@600;700'};
+const GF={...FT,...FX};
+const FMT={
+ vertical:{n:'Post vertical',s:'1080 × 1350',h:675,sup:0,inf:0,gh:110,tmax:96,ball:112,fs:17},
+ historia:{n:'Historia',s:'1080 × 1920',h:960,sup:56,inf:70,gh:150,tmax:132,ball:150,fs:19},
+ cuadrado:{n:'Cuadrado',s:'1080 × 1080',h:540,sup:0,inf:0,gh:84,tmax:70,ball:90,fs:15}
+};
+const K='afoch_torneo_v1';
+let S={tag:'LIGA A.F.O.CH',titulo:'COPA\nDE VERANO',cinta:'TORNEO DE VERANO 2026',fecha:'Arranca el sábado 5/12',
+ datos:'Categorías: Primera · Sub-20 · Juveniles\nInscripción hasta: 27/11\nCierre de listas: 30/11',pie:'Inscripciones: 3735 00-0000 · A.F.O.CH',
+ tema:'oro',ft:'Bebas Neue',fx:'Barlow Condensed',fmt:'vertical',ov:45,zoom:100,px:50,py:50,pelota:true,cesped:true,sol:true,bg:'',logo:'',ltam:58,lpos:'izq',lfondo:true,marca:'2026',extra:'Sede: Cancha de la Liga\nPremios: Copa y medallas'};
+try{Object.assign(S,JSON.parse(localStorage[K]||'{}'))}catch(e){}
+if(!TEMAS[S.tema])S.tema='oro';if(!FT[S.ft])S.ft='Bebas Neue';if(!FX[S.fx])S.fx='Barlow Condensed';if(!FMT[S.fmt])S.fmt='vertical';if(!['izq','centro','der'].includes(S.lpos))S.lpos='izq';
+S.bg='';S.logo='';
+const guardar=()=>{try{const{bg,logo,...r}=S;localStorage[K]=JSON.stringify(r)}catch(e){}};
+const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const rg=(h,a)=>{const n=parseInt(h.slice(1),16);return`rgba(${n>>16},${n>>8&255},${n&255},${a})`};
+let LOGO='';
+
+function ball(sz){
+ let p='';for(let i=0;i<5;i++)p+=`<g transform="rotate(${i*72} 50 50)"><path d="M50 31V14" stroke="#111" stroke-width="2.6"/><polygon points="43,14 57,14 62,3 50,-4 38,3" fill="#111"/></g>`;
+ return`<svg width="${sz}" height="${sz}" viewBox="0 0 100 100" style="display:block"><defs><clipPath id="bcl"><circle cx="50" cy="50" r="48"/></clipPath><radialGradient id="bgr" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#d9dee5"/></radialGradient></defs><circle cx="50" cy="50" r="48" fill="url(#bgr)"/><g clip-path="url(#bcl)">${p}<polygon points="50,31 68,44 61,65 39,65 32,44" fill="#111"/></g><circle cx="50" cy="50" r="48" fill="none" stroke="#111" stroke-width="2.4"/></svg>`;
+}
+
+function flyer(){
+ const T=TEMAS[S.tema],F=FMT[S.fmt],W=540,pd=28,iw=W-pd*2,img=!!S.bg;
+ const c1=img?'#fff':T.t1,c2=img?T.hi:T.t2,sh=img?'rgba(0,0,0,.55)':T.sh,gh=F.gh+F.inf;
+ const fx=`font-family:'${S.fx}';`,ft=`font-family:'${S.ft}';`;
+ const bgl=img?`<img src="${S.bg}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:${S.px}% ${S.py}%;transform:scale(${S.zoom/100});transform-origin:${S.px}% ${S.py}%"><div style="position:absolute;inset:0;background:linear-gradient(180deg,${rg(T.a,S.ov*.008)},${rg(T.b,S.ov*.008)})"></div><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,${S.ov*.003}),rgba(0,0,0,${S.ov*.006}))"></div>`:'';
+ const sun=S.sol?`<div style="position:absolute;inset:0;background:repeating-conic-gradient(from 0deg at 100% 0%,rgba(255,255,255,.05) 0 5deg,transparent 5deg 12deg)"></div>`:'';
+ const gr=S.cesped?`<div style="position:absolute;left:0;right:0;bottom:0;height:${gh}px;background:repeating-linear-gradient(90deg,${T.g1} 0 38px,${T.g2} 38px 76px);border-top:3px solid rgba(255,255,255,.85)"></div><div style="position:absolute;left:50%;bottom:${-gh*.55}px;width:${gh*1.3}px;height:${gh*1.3}px;margin-left:${-gh*.65}px;border:3px solid rgba(255,255,255,.55);border-radius:50%"></div>`:'';
+ const bl=S.pelota?`<div style="position:absolute;right:${-F.ball*.28}px;bottom:${F.inf+Math.round(F.gh*.1)}px;width:${Math.round(F.ball*1.45)}px"><div style="position:absolute;left:0;right:0;bottom:-8px;height:${F.ball*.16}px;background:radial-gradient(ellipse,rgba(0,0,0,.4),transparent 70%)"></div><div style="position:relative;transform:rotate(-14deg)">${ball(Math.round(F.ball*1.45))}</div></div>`:'';
+ const lg=S.logo||LOGO;
+ const al=S.lpos==='centro'?'center':'flex-start',ta=S.lpos==='centro'?'center':'left',L=S.ltam,lf=S.lfondo;
+ const logo=`<div style="width:${L}px;height:${L}px;border-radius:50%;background:${lf?'#fff':'transparent'};display:flex;align-items:center;justify-content:center;overflow:hidden;${lf?'box-shadow:0 3px 0 rgba(0,0,0,.25);':''}flex:none">${lg?`<img src="${lg}" style="max-width:${lf?80:100}%;max-height:${lf?80:100}%;object-fit:contain">`:`<span style="${ft}font-size:${Math.round(L*.33)}px;line-height:1;color:${lf?T.acT:c1};text-align:center">A.F.<br>O.CH</span>`}</div>`;
+ const tag=S.tag.trim()?`<span style="${fx}font-weight:800;font-size:15px;letter-spacing:.14em;color:${c1};text-transform:uppercase;text-shadow:0 2px 0 ${sh}">${esc(S.tag)}</span>`:'';
+ const hdr=S.lpos==='centro'?`<div style="display:flex;flex-direction:column;align-items:center;gap:8px">${logo}${tag}</div>`:`<div style="display:flex;align-items:center;gap:14px;justify-content:${S.lpos==='der'?'space-between':'flex-start'}">${S.lpos==='der'?tag+logo:logo+tag}</div>`;
+ const tl=S.titulo.split('\n').map(s=>s.trim()).filter(Boolean).map((l,i)=>`<div style="line-height:.95"><span data-fit="${F.tmax}" data-w="${iw}" style="display:inline-block;white-space:nowrap;${ft}color:${i?c2:c1};text-shadow:0 3px 14px rgba(0,0,0,.35);text-transform:uppercase;letter-spacing:.01em">${esc(l)}</span></div>`).join('');
+ const cin=S.cinta.trim()?`<div style="align-self:${al};background:${T.cin};padding:7px 20px;border-radius:0"><span data-fit="24" data-w="${iw-60}" style="display:inline-block;white-space:nowrap;${fx}font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:${T.cinT}">${esc(S.cinta)}</span></div>`:'';
+ const fe=S.fecha.trim()?`<div style="align-self:${al};background:${T.ac};padding:5px 18px 3px;border-radius:2px"><span data-fit="30" data-w="${iw-40}" style="display:inline-block;white-space:nowrap;${ft}letter-spacing:.04em;text-transform:uppercase;color:${T.acT}">${esc(S.fecha)}</span></div>`:'';
+ const dl=S.datos.split('\n').map(s=>s.trim()).filter(Boolean).map(l=>{const m=l.match(/^([^:]{1,32}):\s*(.+)$/);return`<div style="display:flex;gap:9px;align-items:baseline"><i style="width:6px;height:6px;background:${T.hi};flex:none"></i><span>${m?`<b style="color:${T.hi}">${esc(m[1])}:</b> ${esc(m[2])}`:esc(l)}</span></div>`}).join('');
+ const da=dl?`<div style="border-left:3px solid ${T.hi};padding:2px 0 2px 14px;display:flex;flex-direction:column;gap:6px;${fx}font-weight:700;font-size:${F.fs}px;line-height:1.15;color:#fff;text-transform:uppercase;letter-spacing:.03em">${dl}</div>`:'';
+ const ex=S.extra.split('\n').map(s=>s.trim()).filter(Boolean).map(l=>{const m=l.match(/^([^:]{1,24}):\s*(.+)$/);return`<div style="flex:1 1 0;min-width:0;border-top:2px solid ${T.hi};padding-top:5px"><div style="font-size:${F.fs-5}px;letter-spacing:.14em;color:${T.hi};font-weight:800">${esc(m?m[1]:'')}</div><div style="font-size:${F.fs+1}px;font-weight:800;line-height:1.1;margin-top:2px">${esc(m?m[2]:l)}</div></div>`}).join('');
+ const xt=ex?`<div style="display:flex;gap:14px;${fx}color:#fff;text-transform:uppercase;letter-spacing:.04em;margin-top:2px">${ex}</div>`:'';
+ const mk=S.marca.trim()?`<div style="position:absolute;left:-8px;top:${Math.round(F.h*.36)}px;white-space:nowrap;${ft}font-size:${Math.round(F.h*.42)}px;line-height:1;color:transparent;-webkit-text-stroke:2px rgba(255,255,255,.13)">${esc(S.marca)}</div>`:'';
+ const pi=S.pie.trim()?`<div style="position:absolute;left:${pd}px;bottom:${F.inf+16}px;max-width:${S.pelota?iw-F.ball-10:iw}px;${fx}font-weight:800;font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.35);line-height:1.15">${esc(S.pie)}</div>`:'';
+ return`<div style="position:relative;width:${W}px;height:${F.h}px;overflow:hidden;background:linear-gradient(160deg,${T.a},${T.b});${fx}">${bgl}${sun}${mk}${gr}<div style="position:absolute;inset:0;padding:${pd+F.sup}px ${pd}px 0;display:flex;flex-direction:column;gap:12px;box-sizing:border-box">${hdr}<div style="margin-top:4px;text-align:${ta}"><div style="width:56px;height:5px;background:${c2};margin:0 ${S.lpos==='centro'?'auto':'0'} 10px"></div>${tl}</div>${cin}${fe}${da}${xt}</div>${bl}${pi}</div>`;
+}
+
+function fit(r){r.querySelectorAll('[data-fit]').forEach(e=>{e.style.fontSize='100px';e.style.fontSize=Math.min(+e.dataset.fit,100*e.dataset.w/e.offsetWidth)+'px'})}
+let tok=0,tm;
+async function render(){
+ const my=++tok;
+ await Promise.all([S.ft,S.fx].flatMap(f=>[400,700,800].map(w=>document.fonts.load(`${w} 40px "${f}"`).catch(()=>0))));
+ if(my!==tok)return;
+ const F=FMT[S.fmt],h=flyer(),sc=Math.min(1,Math.min(460,$('pv').parentNode.clientWidth-8)/540,(innerHeight-120)/F.h);
+ $('pv').innerHTML=`<div style="width:${540*sc}px;height:${F.h*sc}px"><div style="width:540px;height:${F.h}px;transform:scale(${sc});transform-origin:0 0">${h}</div></div>`;
+ $('ex').innerHTML=h;fit($('pv'));fit($('ex'));guardar();
+}
+const sched=()=>{clearTimeout(tm);tm=setTimeout(render,120)};
+
+// Tipografías incrustadas para el PNG
+const cssF={};let fallo=false;
+const aData=b=>new Promise(r=>{const l=new FileReader();l.onload=()=>r(l.result);l.readAsDataURL(b)});
+async function fontCSS(names){
+ let out=window.CSS_FUENTES_LIGA||'';
+ for(const n of names){
+  if(window.CSS_FUENTES_LIGA&&/Bebas|Barlow/.test(n))continue;
+  const sp=GF[n];
+  if(!(sp in cssF)){
+   try{
+    let css=await(await fetch('https://fonts.googleapis.com/css2?family='+sp+'&display=swap')).text();
+    css=(css.match(/\/\* latin(?:-ext)? \*\/\s*@font-face\s*\{[^}]*\}/g)||[css]).join('\n');
+    for(const u of new Set(css.match(/https:\/\/[^)\s'"]+/g)||[]))css=css.split(u).join(await aData(await(await fetch(u)).blob()));
+    cssF[sp]=css;
+   }catch(e){cssF[sp]='';fallo=true}
+  }
+  out+=cssF[sp];
+ }
+ return out;
+}
+
+function toast(m,err){const t=$('toast');t.textContent=m;t.style.background=err?'#b91c1c':'#0b3a66';t.style.display='block';clearTimeout(toast.i);toast.i=setTimeout(()=>t.style.display='none',3500)}
+$('dl').onclick=async function(){
+ const b=this,t=b.textContent;b.disabled=true;b.textContent='Generando…';
+ try{
+  await render();
+  const css=await fontCSS([S.ft,S.fx]),n=$('ex').firstChild,o={pixelRatio:2,style:{transform:'none'}};
+  if(css)o.fontEmbedCSS=css;
+  await htmlToImage.toPng(n,{...o,pixelRatio:1});
+  const a=document.createElement('a');a.download=`afoch-torneo-${S.fmt}.png`;a.href=await htmlToImage.toPng(n,o);a.click();
+  toast(fallo?'Descargada, pero alguna tipografía no se pudo incrustar (revisá la conexión).':'Imagen descargada.',fallo);fallo=false;
+ }catch(e){console.error(e);toast('No se pudo generar la imagen. Probá de nuevo.',1)}
+ b.disabled=false;b.textContent=t;
+};
+
+// Imágenes: se achican para que no pesen
+const leer=(f,max,tipo)=>new Promise(r=>{const fr=new FileReader();fr.onload=()=>{const i=new Image();i.onload=()=>{const s=Math.min(1,max/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*s);c.height=Math.round(i.height*s);c.getContext('2d').drawImage(i,0,0,c.width,c.height);r(c.toDataURL(tipo,.88))};i.src=fr.result};fr.readAsDataURL(f)});
+$('fbg').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(f){S.bg=await leer(f,1600,'image/jpeg');render()}};
+$('flogo').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(f){S.logo=await leer(f,300,'image/png');render()}};
+$('qbg').onclick=()=>{S.bg='';render()};
+$('qlogo').onclick=()=>{S.logo='';render()};
+
+// Controles
+const tile=(k,v,h)=>`<button type="button" class="tile" data-s="${k}" data-v="${esc(v)}">${h}</button>`;
+$('t-tema').innerHTML=Object.entries(TEMAS).map(([k,t])=>tile('tema',k,`<i class="sw" style="background:linear-gradient(135deg,${t.a},${t.b})"><b style="background:${t.hi}"></b></i>${t.n}`)).join('');
+$('t-ft').innerHTML=Object.keys(FT).map(n=>tile('ft',n,`<span style="font-family:'${n}';font-size:26px;line-height:1.1;font-weight:400">Aa</span><small>${n}</small>`)).join('');
+$('t-fx').innerHTML=Object.keys(FX).map(n=>tile('fx',n,`<span style="font-family:'${n}';font-size:22px;line-height:1.1;font-weight:800">Aa</span><small>${n}</small>`)).join('');
+$('t-fmt').innerHTML=Object.entries(FMT).map(([k,f])=>tile('fmt',k,`${f.n}<small>${f.s}</small>`)).join('');
+$('t-lpos').innerHTML=[['izq','Izquierda'],['centro','Centro'],['der','Derecha']].map(([k,n])=>tile('lpos',k,n)).join('');
+const marcar=()=>document.querySelectorAll('[data-s]').forEach(b=>b.classList.toggle('on',S[b.dataset.s]===b.dataset.v));
+document.querySelectorAll('[data-k]').forEach(el=>{if(el.type==='checkbox')el.checked=!!S[el.dataset.k];else el.value=S[el.dataset.k]});
+document.addEventListener('input',e=>{const t=e.target,k=t.dataset.k;if(!k)return;S[k]=t.type==='checkbox'?t.checked:t.type==='range'?+t.value:t.value;sched()});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b){S[b.dataset.s]=b.dataset.v;marcar();render()}});
+addEventListener('resize',sched);
+marcar();render();
+
+// Logo de la liga (afoch-logo.png junto a este archivo)
+{const i=new Image();i.onload=()=>{try{const c=document.createElement('canvas');c.width=i.naturalWidth;c.height=i.naturalHeight;c.getContext('2d').drawImage(i,0,0);LOGO=c.toDataURL('image/png')}catch(e){LOGO=i.src}render()};i.src='afoch-logo.png'}
+</script>
+</body>
+</html>
