@@ -3,17 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flyers de programación | Liga A.F.O.CH</title>
+    <title>Generador de flyers | Dropea</title>
+    <link rel="shortcut icon" href="favicon-96x96.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Fuente de la interfaz + tipografías de los flyers (Bebas Neue y Barlow Condensed) -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Bebas+Neue&family=Barlow+Condensed:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- La fuente de la interfaz. Las tipografías de los flyers las carga flyers.js -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;0,800;1,800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js"></script>
     <script>
         tailwind.config = {
-            theme: { extend: { fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] }, colors: { liga: '#0673C8' } } }
+            theme: { extend: { fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] }, colors: { obsidian: '#070a14' } } }
         }
     </script>
 
@@ -23,162 +25,107 @@
 
         .seccion { background: #fff; border: 1px solid #e2e8f0; border-radius: 1.25rem; padding: 1rem; }
         .seccion-titulo { font-size: 0.7rem; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 0.75rem; }
+
         .campo-label { display: block; font-size: 0.7rem; font-weight: 800; color: #334155; margin-bottom: 0.3rem; }
-        .campo-ayuda { font-size: 0.65rem; font-weight: 600; color: #94a3b8; margin-top: 0.25rem; line-height: 1.35; }
+        .campo-ayuda { font-size: 0.65rem; font-weight: 600; color: #94a3b8; margin-top: 0.25rem; line-height: 1.3; }
         .campo {
             width: 100%; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 0.55rem 0.75rem;
             font-size: 0.85rem; font-weight: 600; color: #0f172a; background: #f8fafc; outline: none; transition: border-color .15s, background .15s;
         }
-        .campo:focus { border-color: #0673C8; background: #fff; }
-        textarea.campo { resize: vertical; line-height: 1.4; }
-        #in-texto { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.74rem; font-weight: 500; white-space: pre; overflow: auto; }
+        .campo:focus { border-color: #1e40af; background: #fff; }
+        .campo:disabled { cursor: not-allowed; }
+        textarea.campo { resize: vertical; line-height: 1.35; }
 
+        /* Tiles de formato y estilo */
         .tile {
             display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem; text-align: left;
             padding: 0.6rem 0.7rem; border: 2px solid #e2e8f0; border-radius: 0.9rem; background: #fff; cursor: pointer; transition: border-color .15s, background .15s;
         }
         .tile:hover { border-color: #cbd5e1; background: #f8fafc; }
-        .tile-activo { border-color: #0673C8 !important; background: #eff8ff !important; }
-        .tile-forma { display: block; border: 2px solid #64748b; border-radius: 0.25rem; margin-bottom: 0.2rem; }
-        .tile-activo .tile-forma { border-color: #0673C8; }
+        .tile-activo { border-color: #1e40af !important; background: #eff6ff !important; }
+        .tile-forma { display: block; height: 1.15rem; border: 2px solid #64748b; border-radius: 0.25rem; margin-bottom: 0.2rem; }
+        .tile-activo .tile-forma { border-color: #1e40af; }
         .tile-label { font-size: 0.75rem; font-weight: 800; color: #0f172a; line-height: 1.15; }
         .tile-sub { font-size: 0.62rem; font-weight: 600; color: #94a3b8; line-height: 1.25; }
 
+        /* Botones "Color" y "Tipografía" */
+        .pill-trigger {
+            display: flex; align-items: center; gap: 0.5rem; width: 100%; padding: 0.55rem 0.75rem;
+            border: 1px solid #e2e8f0; border-radius: 0.75rem; background: #fff; cursor: pointer; font-size: 0.78rem; font-weight: 700; color: #0f172a;
+        }
+        .pill-trigger:hover { border-color: #cbd5e1; background: #f8fafc; }
+        .pill-dot { width: 1.05rem; height: 1.05rem; border-radius: 9999px; border: 2px solid #fff; box-shadow: 0 0 0 1px #cbd5e1; flex-shrink: 0; }
+        .pill-aa { font-size: 0.95rem; font-weight: 800; line-height: 1; width: 1.05rem; text-align: center; flex-shrink: 0; }
+        .pill-chev { width: 12px; height: 12px; margin-left: auto; color: #94a3b8; transition: transform .15s; flex-shrink: 0; }
+        .rotate-180 { transform: rotate(180deg); }
+
+        .panel-desplegable { margin-top: 0.5rem; border: 1px solid #e2e8f0; border-radius: 0.9rem; background: #fff; padding: 0.75rem; max-height: 15rem; overflow-y: auto; }
+        .swatch-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .swatch { width: 1.7rem; height: 1.7rem; border-radius: 9999px; border: 2px solid #fff; box-shadow: 0 0 0 1px #cbd5e1; cursor: pointer; transition: transform .12s; }
+        .swatch:hover { transform: scale(1.1); }
+        .swatch-activo { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #0b0c10; }
+
+        .fuente-op { display: flex; align-items: center; gap: 0.6rem; width: 100%; padding: 0.4rem 0.6rem; border-radius: 0.6rem; cursor: pointer; text-align: left; background: transparent; }
+        .fuente-op:hover { background: #eff6ff; }
+        .fuente-aa { font-size: 1.05rem; font-weight: 800; width: 1.6rem; text-align: center; flex-shrink: 0; color: #0b0c10; }
+        .fuente-nombre { font-size: 0.75rem; font-weight: 700; color: #334155; }
+        .fuente-check { margin-left: auto; color: #60a5fa; font-weight: 900; font-size: 0.85rem; display: none; }
+        .fuente-activa { background: #0b0c10; }
+        .fuente-activa:hover { background: #0b0c10; }
+        .fuente-activa .fuente-aa { color: #60a5fa; }
+        .fuente-activa .fuente-nombre { color: #fff; }
+        .fuente-activa .fuente-check { display: block; }
+
+        /* Interruptor del QR */
+        .switch { position: relative; width: 2.4rem; height: 1.4rem; flex-shrink: 0; }
+        .switch input { position: absolute; inset: 0; opacity: 0; cursor: pointer; z-index: 2; margin: 0; }
+        .switch-pista { position: absolute; inset: 0; border-radius: 9999px; background: #cbd5e1; transition: background .15s; }
+        .switch-bola { position: absolute; top: 0.2rem; left: 0.2rem; width: 1rem; height: 1rem; border-radius: 9999px; background: #fff; transition: transform .15s; }
+        .switch input:checked ~ .switch-pista { background: #1e40af; }
+        .switch input:checked ~ .switch-bola { transform: translateX(1rem); }
+        .switch input:focus-visible ~ .switch-pista { outline: 2px solid #1e40af; outline-offset: 2px; }
+
         .btn-guardar {
             display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.4rem;
-            border-radius: 9999px; background: #0673C8; color: #fff; font-size: 0.82rem; font-weight: 800; cursor: pointer; transition: background .15s;
+            border-radius: 9999px; background: #09090b; color: #fff; font-size: 0.82rem; font-weight: 800; cursor: pointer; transition: background .15s;
         }
-        .btn-guardar:hover { background: #055a9c; }
-        .btn-guardar:disabled { opacity: 0.55; cursor: default; }
-        .btn-sec { font-size: 0.72rem; font-weight: 800; color: #475569; padding: 0.5rem 0.9rem; border-radius: 9999px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; }
-        .btn-sec:hover { background: #f1f5f9; color: #0f172a; }
-        .btn-sec:disabled { opacity: 0.55; cursor: default; }
+        .btn-guardar:hover { background: #1e40af; }
+        .btn-guardar:disabled { opacity: 0.6; cursor: default; }
+        .rango { width: 100%; accent-color: #1e40af; cursor: pointer; }
+        .btn-sec { font-size: 0.72rem; font-weight: 800; color: #64748b; padding: 0.5rem 0.9rem; border-radius: 9999px; border: 1px solid #e2e8f0; background: #fff; cursor: pointer; }
+        .btn-sec:hover { background: #f8fafc; color: #0f172a; }
 
         .toast { position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%); z-index: 50; padding: 0.7rem 1.1rem; border-radius: 9999px; font-size: 0.78rem; font-weight: 700; color: #fff; max-width: calc(100vw - 2rem); text-align: center; }
-        .toast-ok { background: #0b3a66; }
+        .toast-ok { background: #09090b; }
         .toast-error { background: #b91c1c; }
 
-        .hidden { display: none !important; }
+        /* Pistas visuales de lo que se puede arrastrar en la vista previa (no salen en el PNG) */
+        @media (hover: hover) {
+            #stage [data-mover]:hover, #stage [data-qr]:hover { outline: 2px dashed rgba(37, 99, 235, 0.85); outline-offset: 4px; }
+        }
+        #stage .mover-arrastrando { outline: 2px solid rgba(37, 99, 235, 0.95); outline-offset: 4px; }
+        #flyer-real.exportando [data-mover], #flyer-real.exportando [data-qr] { outline: none !important; }
 
-        .tab { font-size: 0.78rem; font-weight: 800; padding: 0.45rem 1.1rem; border-radius: 9999px; color: #e0f2fe; background: rgba(255,255,255,0.16); cursor: pointer; transition: background .15s; }
-        .tab:hover { background: rgba(255,255,255,0.28); }
-        .tab-activa, .tab-activa:hover { background: #fff; color: #0673C8; }
-
-        .campo-sm { padding: 0.4rem 0.55rem; font-size: 0.78rem; border-radius: 0.6rem; }
-        .arb-dia { font-size: 0.68rem; font-weight: 800; color: #0673C8; text-transform: uppercase; letter-spacing: 0.12em; margin: 0.6rem 0 0.1rem; }
-        .arb-card { border: 1px solid #e2e8f0; border-radius: 0.9rem; padding: 0.6rem 0.65rem; background: #fff; }
-        .arb-alerta { border-color: #f59e0b; background: #fffbeb; }
-        .arb-partido { font-size: 0.8rem; font-weight: 800; color: #0f172a; line-height: 1.2; }
-        .arb-hora { font-size: 0.72rem; font-weight: 800; color: #0673C8; white-space: nowrap; }
-        .arb-detalle { font-size: 0.62rem; font-weight: 700; color: #94a3b8; margin: 0.1rem 0 0.45rem; }
-        .arb-rot { display: block; font-size: 0.6rem; font-weight: 800; color: #64748b; margin-bottom: 0.15rem; }
-        .arb-aviso { font-size: 0.64rem; font-weight: 700; color: #b45309; margin-top: 0.4rem; }
-
-        .eq-card { display: flex; align-items: center; gap: 0.6rem; border: 1px solid #e2e8f0; border-radius: 0.9rem; padding: 0.5rem; background: #fff; }
-        .eq-sin { border-color: #f59e0b; background: #fffbeb; }
-        .eq-escudo { width: 3.2rem; height: 3.2rem; flex-shrink: 0; border: 2px dashed #cbd5e1; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #94a3b8; font-size: 1.3rem; font-weight: 800; background: #f8fafc; overflow: hidden; }
-        .eq-escudo:hover { border-color: #0673C8; color: #0673C8; }
-        .eq-escudo img { max-width: 90%; max-height: 90%; object-fit: contain; display: block; }
-
-        .nube-chip { font-size: 0.65rem; font-weight: 800; padding: 0.25rem 0.65rem; border-radius: 9999px; background: rgba(255,255,255,0.18); color: #e0f2fe; white-space: nowrap; }
-        .nube-chip[data-tipo="ok"] { background: #fff; color: #0673C8; }
-        .nube-chip[data-tipo="error"] { background: #fee2e2; color: #b91c1c; }
-
-        .hist-card { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 0.75rem 0.85rem; background: #fff; }
-        .hist-abierta { border-color: #0673C8; background: #eff8ff; }
-        .hist-nombre { font-size: 0.85rem; font-weight: 800; color: #0f172a; line-height: 1.2; }
-        .hist-detalle { font-size: 0.68rem; font-weight: 700; color: #94a3b8; margin-top: 0.15rem; }
-        .hist-texto { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.68rem; font-weight: 500; white-space: pre-wrap; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.6rem; padding: 0.5rem; margin-top: 0.4rem; max-height: 14rem; overflow: auto; }
-
-        .hist-mini { display: block; height: 5.5rem; width: auto; border-radius: 0.5rem; border: 1px solid #e2e8f0; background: #fff; }
-
-        :focus-visible { outline: 2px solid #0673C8; outline-offset: 2px; }
+        :focus-visible { outline: 2px solid #1e40af; outline-offset: 2px; }
         @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
     </style>
 </head>
 <body class="bg-slate-100 min-h-full text-slate-900">
 
-    <header style="background: linear-gradient(110deg, #0673C8, #35A7EA);" class="text-white">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-            <div class="flex items-center justify-between gap-3">
-                <h1 class="text-base sm:text-lg font-extrabold italic uppercase tracking-tight leading-none">Flyers de programación</h1>
-                <span id="nube-estado" class="nube-chip" data-tipo="espera" role="status">Nube: conectando…</span>
+    <header class="bg-obsidian text-white">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
+            <div>
+                <h1 class="text-base sm:text-lg font-extrabold italic uppercase tracking-tight leading-none">Generador de flyers</h1>
+                <p class="text-[0.7rem] font-semibold text-slate-400 mt-1">Publicaciones e historias para el Instagram oficial de Dropea</p>
             </div>
-            <p class="text-[0.7rem] font-semibold text-sky-100 mt-1">Liga A.F.O.CH · pegá la programación y descargá los flyers de la fecha o la planilla de árbitros</p>
-            <nav class="flex flex-wrap gap-2 mt-3" role="tablist" aria-label="Secciones">
-                <button type="button" class="tab" role="tab" data-pestana="flyers">Flyers de partidos</button>
-                <button type="button" class="tab" role="tab" data-pestana="resultados">Resultados</button>
-                <button type="button" class="tab" role="tab" data-pestana="arbitros">Árbitros</button>
-                <button type="button" class="tab" role="tab" data-pestana="tabla">Posiciones</button>
-                <button type="button" class="tab" role="tab" data-pestana="cruces">Cruces</button>
-                <button type="button" class="tab" role="tab" data-pestana="historial">Historial</button>
-            </nav>
+            <button type="button" id="btn-reset" class="btn-sec !bg-transparent !text-slate-300 !border-slate-700 hover:!bg-slate-800 hover:!text-white">Restablecer</button>
         </div>
     </header>
 
-    <main id="vista-flyers" class="max-w-7xl mx-auto px-4 sm:px-6 py-5 grid gap-5 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] items-start">
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 py-5 grid gap-5 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] items-start">
 
         <!-- ============ CONTROLES ============ -->
-        <div class="flex flex-col gap-4">
-
-            <!-- La programación es compartida con la pestaña Árbitros (el script la mueve de lugar) -->
-            <div id="slot-prog-flyers"><section id="sec-programacion" class="seccion">
-                <div class="flex items-center justify-between gap-2 mb-3">
-                    <h2 class="seccion-titulo !mb-0">Programación</h2>
-                    <div class="flex gap-2">
-                        <button type="button" id="btn-ordenar" class="btn-sec" title="Acomoda el texto pegado: categoría, zona y un partido por renglón">Ordenar</button>
-                        <button type="button" id="btn-ejemplo" class="btn-sec">Ejemplo</button>
-                        <button type="button" id="btn-limpiar" class="btn-sec">Borrar</button>
-                    </div>
-                </div>
-                <div id="fila-prog-guardar" class="flex items-center gap-2 flex-wrap mb-3">
-                    <button type="button" id="btn-prog-guardar" class="btn-guardar !py-2 !px-4 !text-xs">Guardar</button>
-                    <button type="button" id="btn-prog-nueva" class="btn-sec hidden">Guardar como nueva</button>
-                    <span id="prog-estado" class="campo-ayuda !mt-0"></span>
-                </div>
-                <div id="wrap-texto-flyers">
-                <textarea id="in-texto" class="campo" rows="16" spellcheck="false" wrap="off" placeholder="1ra y Sub-20&#10;Zona Sur - Fecha 6&#10;• Villa Dora Vs. Avenida FC – Jueves 24/09 – 20:30 Hs"></textarea>
-                <p class="campo-ayuda">
-                    Pegá la programación tal cual te la mandan (aunque venga corrida, sin días ni horarios): se ordena sola al pegar, o con el botón <b>Ordenar</b>. Formato final: cada partido en un renglón con <b>VS</b>, por ejemplo
-                    <b>Villa Dora Vs. Avenida FC – Jueves 24/09 – 20:30 Hs</b>. El día y la hora se leen solos (son opcionales).
-                    Los renglones sin viñeta ni VS son títulos: los que empiezan con "Zona" quedan como zona, el resto como categoría.
-                    Si el partido trae una etiqueta antes de los dos puntos (<b>Zona Sur Fecha 2: A Vs B</b>), se agrupan por esa etiqueta.
-                    También sirve el formato con asteriscos <b>*TEXTO*</b>. Una línea con <b>---</b> corta y empieza un flyer nuevo.
-                </p>
-                </div>
-                <div id="wrap-texto-res" class="hidden">
-                    <textarea id="in-texto-res" class="campo" rows="16" spellcheck="false" wrap="off" placeholder="Primera&#10;Zona Sur - Fecha 6&#10;• Dep. Argentino 2 Vs. Sp. Español 0"></textarea>
-                    <p class="campo-ayuda">Escribí cada resultado en un renglón: <b>Dep. Argentino 2 Vs. Sp. Español 0</b> (el goleo va pegado al nombre de cada equipo). Los títulos (categoría, zona) y el día/hora funcionan igual que en la programación. Esta caja es independiente de las otras pestañas y se guarda en este navegador. Diseño, formato, logo y escudos son los mismos de Flyers de partidos.</p>
-                </div>
-                <div id="wrap-texto-arb" class="hidden">
-                    <textarea id="in-texto-arb" class="campo" rows="16" spellcheck="false" wrap="off" placeholder="1ra y Sub-20&#10;Zona Sur - Fecha 6&#10;• Villa Dora Vs. Avenida FC – Jueves 24/09 – 20:30 Hs"></textarea>
-                    <p class="campo-ayuda">Esta programación es solo para la planilla de árbitros: es independiente de la de Flyers de partidos, así que podés pegar o editar una sin tocar la otra. Mismo formato: cada partido en un renglón con <b>VS</b>.</p>
-                </div>
-            </section></div>
-
-            <section class="seccion">
-                <h2 class="seccion-titulo">Encabezado</h2>
-                <div class="flex flex-col gap-3">
-                    <div>
-                        <label class="campo-label" for="in-titulo">Título</label>
-                        <textarea id="in-titulo" class="campo" rows="2" placeholder="PROGRAMACIÓN&#10;TENTATIVA"></textarea>
-                        <p class="campo-ayuda">Cada renglón es una línea del título.</p>
-                    </div>
-                    <div>
-                        <label class="campo-label" for="in-fecha">Fecha o jornada (opcional)</label>
-                        <input id="in-fecha" class="campo" type="text" maxlength="40" placeholder="Domingo 12 de octubre">
-                    </div>
-                    <div>
-                        <label class="campo-label" for="in-pie">Texto del pie</label>
-                        <input id="in-pie" class="campo" type="text" maxlength="40" placeholder="A.F.O.CH">
-                    </div>
-                </div>
-            </section>
-
-            <section class="seccion">
-                <h2 class="seccion-titulo">Diseño</h2>
-                <div id="tiles-diseno" class="grid grid-cols-2 gap-2"></div>
-            </section>
+        <div class="flex flex-col gap-4 order-2 lg:order-1">
 
             <section class="seccion">
                 <h2 class="seccion-titulo">Formato</h2>
@@ -186,355 +133,240 @@
             </section>
 
             <section class="seccion">
-                <h2 class="seccion-titulo">Partidos por flyer</h2>
-                <div id="tiles-densidad" class="grid grid-cols-3 gap-2"></div>
-                <p class="campo-ayuda">Compacta y Muy compacta achican los renglones, la cabecera y la letra para que entren más partidos y salgan menos imágenes. Fijate en el resumen ("N partidos → M flyers") para comparar. Con escudos, los renglones son un poco más altos.</p>
+                <h2 class="seccion-titulo">Estilo</h2>
+                <div id="tiles-plantilla" class="grid grid-cols-2 gap-2"></div>
             </section>
 
             <section class="seccion">
-                <h2 class="seccion-titulo">Logo de la liga</h2>
-                <div class="flex items-center justify-between gap-3 flex-wrap">
-                    <p id="logo-estado" class="text-[0.72rem] font-semibold text-slate-500"></p>
-                    <div class="flex gap-2">
-                        <label class="btn-sec cursor-pointer">
-                            Subir logo
-                            <input id="in-logo" type="file" accept="image/*" class="hidden">
-                        </label>
-                        <button type="button" id="btn-logo-quitar" class="btn-sec hidden">Quitar</button>
+                <h2 class="seccion-titulo">Contenido</h2>
+                <div class="flex flex-col gap-3">
+                    <div>
+                        <label class="campo-label" for="in-etiqueta">Etiqueta (arriba a la derecha)</label>
+                        <input id="in-etiqueta" class="campo" type="text" maxlength="30" placeholder="Novedad">
                     </div>
-                </div>
-                <div class="mt-3">
-                    <div class="flex items-center justify-between gap-2 mb-1">
-                        <label class="campo-label !mb-0" for="in-logo-tam">Tamaño del logo</label>
-                        <div class="flex items-center gap-2">
-                            <span id="logo-tam-valor" class="text-[0.72rem] font-extrabold text-slate-700">100%</span>
-                            <button type="button" id="btn-logo-tam-reset" class="btn-sec !py-1 !px-2.5">Normal</button>
+                    <div>
+                        <label class="campo-label" for="in-titulo">Título</label>
+                        <textarea id="in-titulo" class="campo" rows="3" placeholder="¡Ya tenemos&#10;*catálogo&#10;online!"></textarea>
+                        <p class="campo-ayuda">Cada renglón es una línea del título. Empezá un renglón con * para resaltarlo con el color.</p>
+                        <div class="flex items-center justify-between mt-2">
+                            <label class="campo-label !mb-0" for="in-titulo-zoom">Tamaño del título</label>
+                            <span id="titulo-zoom-val" class="text-[0.7rem] font-bold text-slate-400"></span>
                         </div>
+                        <input id="in-titulo-zoom" type="range" min="50" max="300" step="5" class="rango">
                     </div>
-                    <input id="in-logo-tam" type="range" min="50" max="124" step="2" value="84" class="w-full accent-liga">
-                </div>
-                <p class="campo-ayuda">También podés dejar <code class="font-bold">afoch-logo.png</code> en la misma carpeta que este archivo (abrilo desde tu sitio, no con doble clic desde el disco). Lo que subís acá se guarda en este navegador.</p>
-            </section>
-            <section class="seccion" id="sec-pie-img">
-                <div class="flex items-center justify-between gap-2 mb-3">
-                    <h2 class="seccion-titulo !mb-0">Imágenes del pie</h2>
-                    <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
-                        <input id="chk-pie-img" type="checkbox" class="accent-liga"> Mostrar
-                    </label>
-                </div>
-                <div class="flex items-center justify-between gap-3 flex-wrap">
-                    <p id="pie-img-estado" class="text-[0.72rem] font-semibold text-slate-500"></p>
-                    <div class="flex gap-2">
-                        <label class="btn-sec cursor-pointer">
-                            Subir imágenes
-                            <input id="in-pie-img" type="file" accept="image/*" multiple class="hidden">
-                        </label>
-                        <button type="button" id="btn-pie-img-quitar" class="btn-sec hidden">Quitar todas</button>
+                    <div data-plantillas="oferta,rayos,degradado,producto,editorial">
+                        <label class="campo-label" for="in-destacado">Texto gigante (precio, descuento, fecha)</label>
+                        <input id="in-destacado" class="campo" type="text" maxlength="14" placeholder="30% OFF">
+                    </div>
+                    <div>
+                        <label class="campo-label" for="in-texto">Texto de apoyo</label>
+                        <textarea id="in-texto" class="campo" rows="2" placeholder="Una o dos frases cortas"></textarea>
+                        <div class="flex items-center justify-between gap-3 mt-2">
+                            <div>
+                                <p class="campo-label !mb-0.5">Separar en bloques</p>
+                                <p class="text-[0.68rem] font-semibold text-slate-400">Cada párrafo (separalos con un renglón en blanco) y la lista de puntos se mueven por separado. No aplica al estilo Rayos.</p>
+                            </div>
+                            <label class="switch" aria-label="Separar el texto de apoyo en bloques movibles">
+                                <input id="chk-bloques" type="checkbox">
+                                <span class="switch-pista"></span>
+                                <span class="switch-bola"></span>
+                            </label>
+                        </div>
+                        <div data-plantillas="producto" class="flex items-center justify-between gap-3 mt-2">
+                            <div>
+                                <p class="campo-label !mb-0.5">Mostrar con viñetas</p>
+                                <p class="text-[0.68rem] font-semibold text-slate-400">Apagalo para que el texto salga corrido, sin puntitos.</p>
+                            </div>
+                            <label class="switch" aria-label="Mostrar el texto de apoyo con viñetas">
+                                <input id="chk-vinetas" type="checkbox" checked>
+                                <span class="switch-pista"></span>
+                                <span class="switch-bola"></span>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between mt-2">
+                            <label class="campo-label !mb-0" for="in-texto-zoom">Tamaño de la letra</label>
+                            <span id="texto-zoom-val" class="text-[0.7rem] font-bold text-slate-400"></span>
+                        </div>
+                        <input id="in-texto-zoom" type="range" min="70" max="250" step="5" class="rango">
+                    </div>
+                    <div>
+                        <label class="campo-label" for="in-items">Lista de puntos</label>
+                        <textarea id="in-items" class="campo" rows="4" placeholder="✅ Sin comisiones por venta&#10;✅ Tu tienda online 24/7"></textarea>
+                        <p class="campo-ayuda">Un punto por renglón, separado del texto de apoyo. Si el renglón empieza con un emoji (✅, 🔥…) se usa como viñeta; si no, sale un punto. Los * o - del principio se ignoran.</p>
+                        <div class="flex items-center justify-between mt-2">
+                            <label class="campo-label !mb-0" for="in-items-zoom">Tamaño de la lista</label>
+                            <span id="items-zoom-val" class="text-[0.7rem] font-bold text-slate-400"></span>
+                        </div>
+                        <input id="in-items-zoom" type="range" min="50" max="200" step="5" class="rango">
+                    </div>
+                    <div>
+                        <label class="campo-label" for="in-cta">Botón</label>
+                        <input id="in-cta" class="campo" type="text" maxlength="32" placeholder="Conocé más">
+                    </div>
+                    <div>
+                        <label class="campo-label" for="in-pie">Sitio o usuario (pie)</label>
+                        <input id="in-pie" class="campo" type="text" maxlength="40" placeholder="dropea.com.ar">
+                        <p class="campo-ayuda">Dejá un campo vacío y esa parte no aparece en el flyer.</p>
+                    </div>
+                    <div data-formatos="cuadrado,vertical,historia">
+                        <label class="campo-label" for="in-legal">Letra chica (términos y condiciones)</label>
+                        <textarea id="in-legal" class="campo" rows="3" placeholder="Ej.: Prueba gratis de 15 días. Luego, plan mensual de $10.000."></textarea>
+                        <p class="campo-ayuda">Aparece abajo, en una franja negra con letra chica. Solo en posts e historias (no en la tarjeta). Dejalo vacío y no se muestra.</p>
+                    </div>
+                    <div class="flex items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                        <p class="campo-ayuda !mt-0">Arrastrá los textos y el logo de Dropea en la vista previa (con el mouse o el dedo) para ponerlos donde quieras.</p>
+                        <button type="button" id="btn-pos-reset" class="btn-sec flex-shrink-0">Reubicar</button>
                     </div>
                 </div>
-                <div id="lista-pie-img" class="flex flex-wrap gap-3 mt-3"></div>
-                <p class="campo-ayuda">Podés subir varias a la vez (hasta 6). Salen juntas en el centro de la barra inferior de cada flyer, dentro de un mismo fondo blanco redondeado, en el orden en que las cargaste. Al activarlas, el pie se hace un poco más alto (entran algunos partidos menos por flyer). Se guardan en este navegador.</p>
-            </section>
-            <section class="seccion" id="sec-escudos">
-                <div class="flex items-center justify-between gap-2 mb-3">
-                    <h2 class="seccion-titulo !mb-0">Escudos de los equipos</h2>
-                    <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
-                        <input id="chk-escudos" type="checkbox" class="accent-liga"> Mostrar
-                    </label>
-                </div>
-                <p id="escudos-resumen" class="text-[0.72rem] font-semibold text-slate-500"></p>
-                <p id="escudos-avisos" class="arb-aviso hidden"></p>
-                <div class="mt-3">
-                    <span class="campo-label">Agregar un equipo con su escudo</span>
-                    <div class="flex items-center gap-2">
-                        <label id="eq-nuevo-escudo" class="eq-escudo" title="Elegir el escudo">
-                            <span id="eq-nuevo-preview">+</span>
-                            <input id="in-eq-nuevo-file" type="file" accept="image/*" class="hidden">
-                        </label>
-                        <input id="in-eq-nuevo-nombre" type="text" class="campo campo-sm min-w-0 flex-1" placeholder="Nombre del equipo" autocomplete="off" maxlength="60">
-                        <button type="button" id="btn-eq-nuevo" class="btn-sec">Agregar</button>
-                    </div>
-                    <p class="campo-ayuda">Tocá el cuadro para elegir la imagen (si el nombre está vacío, se completa con el del archivo). Si el equipo ya existe, te pregunta si querés reemplazar su escudo.</p>
-                </div>
-                <div class="flex flex-wrap gap-2 mt-3">
-                    <button type="button" id="btn-eq-prog" class="btn-sec">Traer equipos de la programación</button>
-                    <label class="btn-sec cursor-pointer">
-                        Subir varios escudos
-                        <input id="in-escudos-multi" type="file" accept="image/*" multiple class="hidden">
-                    </label>
-                </div>
-                <details class="mt-3">
-                    <summary class="text-[0.72rem] font-extrabold text-slate-600 cursor-pointer">Pegar una lista de equipos</summary>
-                    <textarea id="in-eq-texto" class="campo mt-2" rows="5" spellcheck="false" placeholder="Marcelino Ugarte | M. Ugarte&#10;Deportivo Comercio | Dep. Comercio&#10;Avenida FC"></textarea>
-                    <button type="button" id="btn-eq-agregar" class="btn-sec mt-2">Agregar a la lista</button>
-                    <p class="campo-ayuda">Un equipo por renglón. Si se escribe distinto en la programación, ponelo después de una barra <b>|</b> (podés poner varios separados por coma).</p>
-                </details>
-                <div class="flex items-center gap-2 mt-3">
-                    <input id="in-eq-buscar" type="search" class="campo campo-sm min-w-0 flex-1" placeholder="Buscar equipo…" autocomplete="off" aria-label="Buscar equipo">
-                    <span id="eq-contador" class="campo-ayuda !mt-0 whitespace-nowrap"></span>
-                </div>
-                <label class="flex items-center gap-2 mt-2 text-[0.72rem] font-bold text-slate-600 cursor-pointer">
-                    <input id="chk-eq-sin" type="checkbox" class="accent-liga"> Mostrar solo los que no tienen escudo
-                </label>
-                <div id="lista-equipos" class="flex flex-col gap-2 mt-3 max-h-[50vh] overflow-y-auto pr-1"></div>
-                <div class="flex flex-wrap items-center gap-2 mt-3">
-                    <button type="button" id="btn-eq-copia" class="btn-sec">Guardar copia</button>
-                    <label class="btn-sec cursor-pointer">
-                        Cargar copia
-                        <input id="in-eq-copia" type="file" accept="application/json,.json" class="hidden">
-                    </label>
-                </div>
-                <p class="campo-ayuda">El nombre se reconoce aunque cambie la mayúscula, la tilde, el "FC" o venga abreviado ("Dep." / "M. Ugarte"). Los escudos se guardan en este navegador y en la nube, así que los tenés en cualquier compu. "Guardar copia" queda como respaldo. Con escudos, los flyers usan renglones más altos (entran menos partidos por flyer).</p>
             </section>
 
-            <section class="seccion" id="sec-imagekit">
-                <div class="flex items-center justify-between gap-2 mb-2">
-                    <h2 class="seccion-titulo !mb-0">Imágenes en la nube (ImageKit)</h2>
-                    <span id="ik-estado" class="text-[0.7rem] font-extrabold"></span>
+            <section class="seccion" data-plantillas="foto,producto,editorial">
+                <h2 class="seccion-titulo">Imagen</h2>
+                <div data-plantillas="foto" class="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                        <p class="campo-label !mb-0.5">Fondo blanco de la tarjeta</p>
+                        <p class="text-[0.68rem] font-semibold text-slate-400">Apagalo para que las imágenes queden sueltas sobre el fondo negro.</p>
+                    </div>
+                    <label class="switch" aria-label="Mostrar el fondo blanco de la tarjeta">
+                        <input id="chk-fondo-foto" type="checkbox" checked>
+                        <span class="switch-pista"></span>
+                        <span class="switch-bola"></span>
+                    </label>
                 </div>
-                <p class="campo-ayuda !mt-0 mb-3">Con las claves cargadas, los escudos nuevos y los PNG de las programaciones que guardes se suben a ImageKit. Sin claves, los escudos se guardan como imagen dentro de Firestore y los flyers no se suben.</p>
-                <details>
-                    <summary class="text-[0.72rem] font-extrabold text-slate-600 cursor-pointer">Claves de ImageKit</summary>
-                    <div class="flex flex-col gap-3 mt-2">
+                <div id="imagenes-wrap" class="flex flex-col gap-3"></div>
+                <p class="campo-ayuda">Podés subir hasta dos imágenes (por ejemplo, celular y PC). Con "Entera" y un tamaño menor la imagen se achica, y la movés arrastrándola con el mouse o el dedo en la vista previa; la segunda queda por encima de la primera. Podés rotarla, redondear sus bordes y ponerle contorno; en el estilo Producto el aro brillante se adapta a la imagen (posición, tamaño y giro). Al subir una imagen se activa el estilo Foto.</p>
+            </section>
+
+            <section class="seccion" data-plantillas="editorial">
+                <h2 class="seccion-titulo">Estilo editorial</h2>
+                <div class="flex flex-col gap-3">
+                    <div class="flex items-center justify-between gap-3">
                         <div>
-                            <label class="campo-label" for="in-ik-pub">Public key</label>
-                            <input id="in-ik-pub" class="campo" type="text" placeholder="public_..." autocomplete="off" spellcheck="false">
+                            <p class="campo-label !mb-0.5">Fondo oscuro</p>
+                            <p class="text-[0.68rem] font-semibold text-slate-400">Apagado: fondo crema con letras negras.</p>
                         </div>
+                        <label class="switch" aria-label="Usar fondo oscuro arriba">
+                            <input id="chk-ed-oscuro" type="checkbox">
+                            <span class="switch-pista"></span>
+                            <span class="switch-bola"></span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between gap-3">
                         <div>
-                            <label class="campo-label" for="in-ik-priv">Private key</label>
-                            <input id="in-ik-priv" class="campo" type="password" placeholder="private_..." autocomplete="off" spellcheck="false">
+                            <p class="campo-label !mb-0.5">Botones de Google Play y App Store</p>
+                            <p class="text-[0.68rem] font-semibold text-slate-400">Se dibujan sobre la foto, debajo del botón.</p>
                         </div>
-                        <div class="flex gap-2">
-                            <button type="button" id="btn-ik-guardar" class="btn-sec">Guardar claves</button>
-                            <button type="button" id="btn-ik-quitar" class="btn-sec hidden">Quitar</button>
+                        <label class="switch" aria-label="Mostrar botones de tienda">
+                            <input id="chk-ed-tiendas" type="checkbox">
+                            <span class="switch-pista"></span>
+                            <span class="switch-bola"></span>
+                        </label>
+                    </div>
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <label class="campo-label !mb-0" for="in-ed-alto">Espacio para el texto (vs. la foto)</label>
+                            <span id="ed-alto-val" class="text-[0.7rem] font-bold text-slate-400"></span>
+                        </div>
+                        <input id="in-ed-alto" type="range" min="30" max="70" step="1" class="rango">
+                        <div class="flex items-center justify-between gap-3 mt-1">
+                            <p class="campo-ayuda !mt-0">Tip: el 1.er renglón del título va arriba del texto gigante y los demás abajo. Poné *asteriscos* alrededor de una palabra (título o botón) para resaltarla.</p>
+                            <button type="button" id="btn-ed-alto-auto" class="btn-sec flex-shrink-0">Auto</button>
                         </div>
                     </div>
-                    <p class="campo-ayuda">Las claves se guardan solo en este navegador (no en el código ni en Firebase). La firma de cada subida se calcula acá mismo, así que no abras esta página en una compu que no sea tuya.</p>
-                </details>
-                <label class="flex items-center gap-2 mt-3 text-xs font-bold text-slate-700 cursor-pointer">
-                    <input id="chk-subir-flyers" type="checkbox" class="accent-liga"> Subir los PNG a ImageKit al guardar una programación
-                </label>
-                <button type="button" id="btn-ik-migrar" class="btn-sec mt-3">Mover a ImageKit los escudos guardados como imagen</button>
+                </div>
             </section>
+
+            <section class="seccion">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h2 class="seccion-titulo !mb-0.5">Código QR</h2>
+                        <p class="text-[0.68rem] font-semibold text-slate-400">Con el mismo marco de cámara de las tarjetas.</p>
+                    </div>
+                    <label class="switch" aria-label="Mostrar código QR">
+                        <input id="chk-qr" type="checkbox">
+                        <span class="switch-pista"></span>
+                        <span class="switch-bola"></span>
+                    </label>
+                </div>
+                <div id="qr-link-wrap" class="mt-3 opacity-50">
+                    <label class="campo-label" for="in-qr-link">Link al que lleva el QR</label>
+                    <input id="in-qr-link" class="campo" type="url" placeholder="https://dropea.com.ar" disabled>
+                    <p id="qr-aviso" class="hidden text-[0.68rem] font-bold text-red-600 mt-1">No se pudo generar el QR. Revisá el link o recargá la página.</p>
+                    <div class="mt-3" data-formatos="tarjeta">
+                        <p class="campo-label">Ubicación</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button type="button" class="tile" data-qrubic="libre"><span class="tile-label">Libre</span><span class="tile-sub">Lo arrastrás</span></button>
+                            <button type="button" class="tile" data-qrubic="derecha"><span class="tile-label">Derecha</span><span class="tile-sub">Columna propia</span></button>
+                            <button type="button" class="tile" data-qrubic="izquierda"><span class="tile-label">Izquierda</span><span class="tile-sub">Columna propia</span></button>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="flex items-center justify-between">
+                            <label class="campo-label !mb-0" for="in-qr-zoom">Tamaño del QR</label>
+                            <span id="qr-zoom-val" class="text-[0.7rem] font-bold text-slate-400"></span>
+                        </div>
+                        <input id="in-qr-zoom" type="range" min="50" max="250" step="1" class="rango" disabled>
+                    </div>
+                    <div class="flex items-center justify-between gap-3 mt-2">
+                        <p class="campo-ayuda !mt-0">Arrastralo con el mouse o el dedo en la vista previa para ponerlo donde quieras.</p>
+                        <button type="button" id="btn-qr-reset" class="btn-sec flex-shrink-0" disabled>Reubicar</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="seccion" data-formatos="historia">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h2 class="seccion-titulo !mb-0.5">Espacio para link</h2>
+                        <p class="text-[0.68rem] font-semibold text-slate-400">Deja una caja vacía para poner el sticker de link de Instagram.</p>
+                    </div>
+                    <label class="switch" aria-label="Dejar espacio para el link">
+                        <input id="chk-link-historia" type="checkbox">
+                        <span class="switch-pista"></span>
+                        <span class="switch-bola"></span>
+                    </label>
+                </div>
+            </section>
+
+            <section class="seccion">
+                <h2 class="seccion-titulo">Diseño</h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" id="btn-color" class="pill-trigger">
+                        <span id="dot-color" class="pill-dot"></span>
+                        <span id="nombre-color">Color</span>
+                        <svg id="chev-color" class="pill-chev" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <button type="button" id="btn-fuente" class="pill-trigger">
+                        <span id="aa-fuente" class="pill-aa">Aa</span>
+                        <span id="nombre-fuente">Tipografía</span>
+                        <svg id="chev-fuente" class="pill-chev" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                </div>
+                <div id="panel-color" class="hidden panel-desplegable"><div id="paleta-grid" class="swatch-grid"></div></div>
+                <div id="panel-fuente" class="hidden panel-desplegable"><div id="fuente-lista" class="flex flex-col gap-1"></div></div>
+            </section>
+
+            <p class="text-[0.68rem] font-semibold text-slate-400 px-1 pb-4">
+                Tu trabajo se guarda solo en este navegador. Para que aparezca el logo, dejá <code class="font-bold">dropea-logo.png</code> en la misma carpeta que este archivo y abrilo desde tu sitio (no con doble clic desde el disco).
+            </p>
         </div>
 
         <!-- ============ VISTA PREVIA ============ -->
-        <div class="flex flex-col gap-4">
+        <div class="order-1 lg:order-2 lg:sticky lg:top-4 flex flex-col gap-3">
+            <div id="stage" class="flex items-center justify-center bg-slate-50 rounded-2xl border border-slate-200 p-5 sm:p-7 h-[430px] sm:h-[600px]"></div>
             <div class="flex items-center justify-between gap-3 flex-wrap">
-                <p id="resumen" class="text-sm font-extrabold text-slate-700"></p>
-                <button type="button" id="btn-todos" class="btn-guardar">
+                <p id="nota-descarga" class="text-[0.7rem] font-semibold text-slate-400">Se descarga en PNG de 1080 px de ancho.</p>
+                <button type="button" id="btn-descargar" class="btn-guardar">
                     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-                    Descargar todos
+                    <span id="lbl-descargar">Descargar</span>
                 </button>
             </div>
-            <div id="previews" class="grid gap-5 justify-items-center bg-slate-50 rounded-2xl border border-slate-200 p-5" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));"></div>
-            <p class="text-[0.7rem] font-semibold text-slate-400">Se descargan en PNG de 1080 px de ancho, uno por flyer. Tu trabajo se guarda en este navegador; para conservarlo en la nube tocá Guardar (después lo ves en Historial).</p>
         </div>
     </main>
-
-    <!-- ============ PESTAÑA ÁRBITROS ============ -->
-    <main id="vista-arbitros" class="hidden max-w-7xl mx-auto px-4 sm:px-6 py-5 grid gap-5 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] items-start">
-
-        <div class="flex flex-col gap-4">
-            <div id="slot-prog-arb"></div>
-
-            <section class="seccion">
-                <div class="flex items-center justify-between gap-2 mb-3">
-                    <h2 class="seccion-titulo !mb-0">Árbitros por partido</h2>
-                    <button type="button" id="btn-arb-limpiar" class="btn-sec">Borrar todo</button>
-                </div>
-                <p class="campo-ayuda !mt-0 mb-3">Los partidos salen de la programación de arriba. Cargá el árbitro principal y los asistentes de cada uno. La cancha se completa sola (la del local, la que va entre paréntesis o el "Local" del título) y la podés cambiar. Todo se guarda en este navegador.</p>
-                <div id="lista-arb" class="flex flex-col gap-2 max-h-[65vh] overflow-y-auto pr-1"></div>
-                <datalist id="dl-arbitros"></datalist>
-            </section>
-
-            <section class="seccion">
-                <h2 class="seccion-titulo">Nómina de árbitros</h2>
-                <textarea id="in-nomina" class="campo" rows="5" spellcheck="false" placeholder="Torres Leonardo&#10;Lopez Walter&#10;Montiel Daniela"></textarea>
-                <p class="campo-ayuda">Opcional: un nombre por renglón. Aparecen como sugerencias al escribir en cada partido.</p>
-            </section>
-
-            <section class="seccion">
-                <h2 class="seccion-titulo">Opciones de la planilla</h2>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="campo-label" for="in-anio">Año</label>
-                        <input id="in-anio" class="campo" type="number" min="2000" max="2100">
-                    </div>
-                    <div>
-                        <label class="campo-label" for="in-dia-def">Fecha si falta (dd/mm)</label>
-                        <input id="in-dia-def" class="campo" type="text" maxlength="10" placeholder="11/10">
-                    </div>
-                </div>
-                <label class="flex items-center gap-2 mt-3 text-xs font-bold text-slate-700 cursor-pointer">
-                    <input id="chk-ordenar" type="checkbox" class="accent-liga"> Ordenar los partidos de cada día por horario
-                </label>
-                <p class="campo-ayuda">Los partidos se agrupan por día (con el título "FECHA: SÁBADO 10/10/2026") y por categoría/zona. Los que no traen día en la programación usan la fecha de arriba.</p>
-            </section>
-
-            <section class="seccion">
-                <h2 class="seccion-titulo">Estilo</h2>
-                <div id="tiles-estilo-arb" class="grid grid-cols-2 gap-2"></div>
-            </section>
-        </div>
-
-        <div class="flex flex-col gap-4 min-w-0">
-            <div class="flex items-center justify-between gap-3 flex-wrap">
-                <p id="resumen-arb" class="text-sm font-extrabold text-slate-700"></p>
-                <button type="button" id="btn-todos-arb" class="btn-guardar">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-                    Descargar todas
-                </button>
-            </div>
-            <div id="previews-arb" class="grid gap-5 justify-items-center bg-slate-50 rounded-2xl border border-slate-200 p-5"></div>
-            <p class="text-[0.7rem] font-semibold text-slate-400">Se descargan en PNG de 2028 px de ancho, una imagen por hoja. Los días no se cortan: se juntan enteros en cada hoja hasta llenarla, y todas las hojas salen del mismo tamaño para imprimir.</p>
-        </div>
-    </main>
-
-    <!-- ============ PESTAÑA POSICIONES ============ -->
-    <main id="vista-tabla" class="hidden max-w-7xl mx-auto px-4 sm:px-6 py-5 grid gap-5 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] items-start">
-        <div class="flex flex-col gap-4">
-            <section class="seccion">
-                <h2 class="seccion-titulo">1. Puntos actuales</h2>
-                <textarea id="in-tb-base" class="campo" rows="12" spellcheck="false" wrap="off" style="font-family:ui-monospace,monospace; white-space:pre; font-size:0.74rem;" placeholder="1ra - Zona Sur&#10;Villa Dora 5 3 1 1 10 5 10&#10;Avenida FC 5 2 2 1 8 6 8"></textarea>
-                <p class="campo-ayuda">Cargá esto <b>una sola vez</b>: lo que cada equipo tiene hoy. Un equipo por renglón: <b>Nombre PJ G E P GF GC PTS</b> (se puede copiar de una planilla). Si no ponés PTS se calcula como 3·G + E; si hubo puntos descontados, escribilos. Un renglón sin números es el título de otra tabla (por ejemplo 1ra y Sub-20).</p>
-            </section>
-            <section class="seccion">
-                <h2 class="seccion-titulo">2. Resultados de la programación</h2>
-                <p class="campo-ayuda !mt-0">Se muestran los partidos de la programación de las categorías que tengan tabla (Primera, Sub 20…), una línea de marcador por categoría. Escribí el resultado y la tabla suma, resta o empata sola. Quedan guardados aunque después cambies la programación. Los títulos de la base tienen que decir la categoría y la zona, por ejemplo <b>Sub 20 - Zona Sur</b>.</p>
-                <p id="tb-res-resumen" class="campo-ayuda !mt-2 !text-slate-500"></p>
-                <div id="lista-tb-res" class="flex flex-col gap-1.5 mt-2 max-h-[60vh] overflow-y-auto pr-1"></div>
-                <div id="tb-res-viejos"></div>
-            </section>
-            <details class="seccion">
-                <summary class="seccion-titulo !mb-0 cursor-pointer">3. Resultados escritos a mano (opcional)</summary>
-                <div class="flex items-center justify-between gap-2 my-3">
-                    <span class="campo-ayuda !mt-0">Para fechas que ya no tenés en la programación.</span>
-                    <button type="button" id="btn-tb-fecha" class="btn-sec">+ Fecha</button>
-                </div>
-                <div id="lista-tb-fechas" class="flex flex-col gap-2"></div>
-                <p class="campo-ayuda">Una fecha por cuadro, un partido por renglón: <b>Villa Dora 2 - 1 Avenida FC</b>. Si tenés varias tablas, poné antes el mismo título que en la base (1ra - Zona Sur). Se suma todo sobre los puntos actuales: si corregís un resultado o quitás una fecha, la tabla se recalcula bien, sin duplicar.</p>
-            </details>
-            <section class="seccion">
-                <h2 class="seccion-titulo">Aspecto</h2>
-                <div class="flex flex-col gap-3">
-                    <div><label class="campo-label" for="in-tb-titulo">Título</label><textarea id="in-tb-titulo" class="campo" rows="2"></textarea></div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label class="campo-label" for="sel-tb-diseno">Diseño</label><select id="sel-tb-diseno" class="campo"></select></div>
-                        <div><label class="campo-label" for="sel-tb-formato">Formato</label><select id="sel-tb-formato" class="campo"></select></div>
-                    </div>
-                </div>
-                <p class="campo-ayuda">Logo, pie y escudos son los mismos de la pestaña Flyers. Orden: puntos, diferencia de gol, goles a favor.</p>
-            </section>
-            <section class="seccion">
-                <h2 class="seccion-titulo">Nube</h2>
-                <div class="flex gap-2"><button type="button" id="btn-tb-nube-guardar" class="btn-sec">Guardar en la nube</button><button type="button" id="btn-tb-nube-cargar" class="btn-sec">Cargar de la nube</button></div>
-            </section>
-        </div>
-        <div class="flex flex-col gap-4 min-w-0">
-            <div class="flex items-center justify-between gap-3 flex-wrap">
-                <p id="tb-resumen" class="text-sm font-extrabold text-slate-700"></p>
-                <button type="button" id="btn-tb-todos" class="btn-guardar">Descargar todas</button>
-            </div>
-            <p id="tb-avisos" class="arb-aviso hidden"></p>
-            <div id="tb-previews" class="grid gap-5 justify-items-center bg-slate-50 rounded-2xl border border-slate-200 p-5" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));"></div>
-        </div>
-    </main>
-
-    <!-- ============ PESTAÑA CRUCES ============ -->
-    <main id="vista-cruces" class="hidden max-w-7xl mx-auto px-4 sm:px-6 py-5 grid gap-5 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] items-start">
-        <div class="flex flex-col gap-4">
-            <section class="seccion">
-                <div class="flex items-center justify-between gap-2 mb-3">
-                    <h2 class="seccion-titulo !mb-0">Cruces</h2>
-                    <div class="flex gap-2">
-                        <button type="button" id="cr-btn-ejemplo" class="btn-sec">Ejemplo</button>
-                        <button type="button" id="cr-btn-borrar" class="btn-sec">Borrar</button>
-                    </div>
-                </div>
-                <textarea id="cr-texto" class="campo" rows="18" spellcheck="false" wrap="off" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre; font-size:0.74rem; font-weight:500; overflow:auto;" placeholder="COPA DE ORO:&#10;A: 1° ZONA NORTE: EQUIPO 1 VS 4° ZONA SUR: EQUIPO 2"></textarea>
-                <p class="campo-ayuda">Pegá los cruces tal cual te los mandan. Sale <b>un flyer por cada copa o categoría</b>. Cada cruce va en un renglón: <b>A: 1° ZONA NORTE: UNION SB VS 4° ZONA SUR: M. UGARTE</b>. Si un lugar todavía no está definido, separá las opciones con una barra (<b>AVENIDA FC/DEP. COMERCIO</b>) y se muestran las dos. Los títulos como <b>COPA DE ORO:</b> o <b>... CUARTOS DE FINAL EN SUB-20:</b> arman cada llave, y <b>A VS C</b> / <b>B VS D</b> definen las semifinales. <b>Día y hora</b> (opcionales): al final del cruce, <b>... – Sábado 14/11 – 16:00 Hs</b>, o en un renglón aparte para agregarlos después, <b>A: Sábado 14/11 – 16:00 Hs</b>. Lo mismo sirve para las semis (<b>A VS C – Domingo 22/11 – 16:00 Hs</b>) y para la final (<b>FINAL – Domingo 29/11 – 17:00 Hs</b>). <b>Resultado</b> (opcional): al final del cruce, <b>... – 2-1</b>, o en un renglón aparte, <b>A: 2-1</b>; el primer número es del primer equipo. Si hubo penales: <b>A: 1-1 (4-3 pen)</b>. Si no tenés el resultado, alcanza con <b>A: PASA M. UGARTE</b> (parte del nombre del que pasó). El equipo que pierde se oscurece.</p>
-                <p id="cr-avisos" class="arb-aviso hidden"></p>
-            </section>
-            <section class="seccion">
-                <h2 class="seccion-titulo">Encabezado</h2>
-                <div class="flex flex-col gap-3">
-                    <div><label class="campo-label" for="cr-torneo">Torneo (línea chica)</label><input id="cr-torneo" class="campo" type="text" maxlength="50" placeholder="TORNEO CLAUSURA 2026"></div>
-                    <div><label class="campo-label" for="cr-titulo">Título</label><input id="cr-titulo" class="campo" type="text" maxlength="40" placeholder="CUARTOS DE FINAL"></div>
-                    <div><label class="campo-label" for="cr-pie">Texto del pie</label><input id="cr-pie" class="campo" type="text" maxlength="40" placeholder="A.F.O.CH"></div>
-                </div>
-                <p class="campo-ayuda">El logo de la liga es el mismo de la pestaña Flyers.</p>
-            </section>
-            <section class="seccion">
-                <h2 class="seccion-titulo">Diseño</h2>
-                <div id="cr-tiles-paleta" class="grid grid-cols-2 gap-2"></div>
-            </section>
-            <section class="seccion">
-                <h2 class="seccion-titulo">Formato</h2>
-                <div id="cr-tiles-formato" class="grid grid-cols-2 gap-2"></div>
-            </section>
-            <section class="seccion">
-                <div class="flex items-center justify-between gap-2">
-                    <h2 class="seccion-titulo !mb-0">Escudos</h2>
-                    <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
-                        <input id="cr-chk-escudos" type="checkbox" class="accent-liga"> Mostrar
-                    </label>
-                </div>
-                <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer mt-2">
-                    <input id="cr-chk-solo" type="checkbox" class="accent-liga"> Solo escudos (sin el nombre del club)
-                </label>
-                <p class="campo-ayuda">Se usan los escudos que ya cargaste en la pestaña Flyers. Donde falta uno aparece un círculo con las iniciales.</p>
-            </section>
-        </div>
-        <div class="flex flex-col gap-4 min-w-0">
-            <div class="flex items-center justify-between gap-3 flex-wrap">
-                <p id="cr-resumen" class="text-sm font-extrabold text-slate-700"></p>
-                <button type="button" id="cr-btn-todos" class="btn-guardar">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-                    Descargar todos
-                </button>
-            </div>
-            <div id="cr-previews" class="grid gap-5 justify-items-center bg-slate-50 rounded-2xl border border-slate-200 p-5" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));"></div>
-            <p class="text-[0.7rem] font-semibold text-slate-400">Se descargan en PNG de 1080 px de ancho, uno por llave. La copa está dibujada (dorada para Copa de Oro, plateada para Copa de Plata).</p>
-        </div>
-    </main>
-
-    <!-- ============ PESTAÑA HISTORIAL ============ -->
-    <main id="vista-historial" class="hidden max-w-3xl mx-auto px-4 sm:px-6 py-5">
-        <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
-            <div>
-                <h2 class="text-sm font-extrabold text-slate-800">Guardados</h2>
-                <p class="campo-ayuda !mt-0.5">Los flyers y las planillas de árbitros se guardan por separado. Los últimos 100, del más nuevo al más viejo. "Abrir" lo carga en su pestaña para editarlo o volver a descargarlo.</p>
-            </div>
-            <button type="button" id="btn-hist-recargar" class="btn-sec">Actualizar</button>
-        </div>
-        <div id="lista-historial" class="flex flex-col gap-2"></div>
-    </main>
-
-    <!-- Copias a tamaño real, fuera de pantalla: de acá sale el PNG -->
-    <div id="export" style="position:fixed; left:-20000px; top:0; pointer-events:none;" aria-hidden="true"></div>
-
-    <!-- Vista ampliada de un flyer -->
-    <div id="visor" style="display:none; position:fixed; inset:0; z-index:40; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:12px; background:rgba(15,23,42,0.9);" role="dialog" aria-modal="true" aria-label="Vista ampliada del flyer">
-        <div id="visor-caja" class="rounded-lg overflow-hidden bg-white" style="box-shadow:0 10px 40px rgba(0,0,0,0.5);"></div>
-        <div class="flex items-center justify-center gap-2 flex-wrap">
-            <button type="button" id="visor-prev" class="btn-sec">‹ Anterior</button>
-            <span id="visor-pos" class="text-xs font-extrabold px-1" style="color:#fff;"></span>
-            <button type="button" id="visor-next" class="btn-sec">Siguiente ›</button>
-            <button type="button" id="visor-desc" class="btn-guardar" style="padding:0.5rem 1.1rem;">Descargar</button>
-            <button type="button" id="visor-imp" class="btn-sec">Imprimir</button>
-            <button type="button" id="visor-cerrar" class="btn-sec">Cerrar</button>
-        </div>
-    </div>
 
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-    <!-- Firebase (módulo): deja listo window.fb. Hay que abrir la página desde un servidor, no con doble clic. -->
-    <script type="module" src="firebase-liga.js"></script>
-    <script src="fuentes-liga.js"></script>
-    <script src="imagekit-liga.js"></script>
-    <script src="tabla-liga.js"></script>
-    <script src="cruces-liga.js?v=pasa"></script>
-    <script src="flyers-liga.js"></script>
+    <script src="flyers.js"></script>
+    <script src="flyers-extra.js"></script>
 </body>
 </html>
