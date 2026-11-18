@@ -676,6 +676,9 @@ const A = { ancho: 1352, dia: 36, banda: 28, head: 28, fila: 29, cap: 1000, max:
 const ARB_RATIO = 1.5;
 const COLS_ARB = [96, 222, 334, 168, 172, 176, 176];   // suman 1344 + 6 separadores + 2 bordes = 1352
 const TITULOS_COLS = ['Hora', 'Detalle / Etapa', 'Partido / Encuentro', 'Estadio / Cancha', 'Árbitro Principal', 'Asistente 1', 'Asistente 2'];
+// Si algún partido tiene 4.º árbitro, la planilla suma esa columna (si no, queda igual que siempre)
+const COLS_ARB_4 = [84, 190, 300, 150, 154, 155, 155, 155];   // suman 1343 + 7 separadores + 2 bordes = 1352
+const TITULOS_COLS_4 = [...TITULOS_COLS, '4.º Árbitro'];
 
 // Colores de la planilla: "excel" imita la planilla actual; el resto reutiliza los diseños de los flyers
 function paletaPlanilla(id) {
@@ -780,7 +783,7 @@ function agruparDias(partidos, asig) {
         const t = (v) => String(v || '').trim();
         b.filas.push({
             hora: p.hora, pend: p.pend, detalle: p.detalle, partido: p.partido,
-            cancha: t(a.cancha) || p.canchaAuto, ap: t(a.ap), a1: t(a.a1), a2: t(a.a2),
+            cancha: t(a.cancha) || p.canchaAuto, ap: t(a.ap), a1: t(a.a1), a2: t(a.a2), a4: t(a.a4),
         });
     });
     if (dias.length > 1) dias.forEach(d => { if (!d.label) d.label = 'SIN FECHA DEFINIDA'; });
@@ -836,7 +839,7 @@ function repartirPlanilla(dias, cap) {
 }
 
 function htmlPlanilla(pag, i, total, c) {
-    const p = c.paleta, W = COLS_ARB;
+    const p = c.paleta, hay4 = !!c.hay4, W = hay4 ? COLS_ARB_4 : COLS_ARB, TIT = hay4 ? TITULOS_COLS_4 : TITULOS_COLS;
     const grid = `display:grid; grid-template-columns:${W.map(w => w + 'px').join(' ')}; gap:1px; padding:0 1px 1px; box-sizing:border-box; width:${A.ancho}px;`;
     const celda = (txt, w, o) => `<div style="background:${o.bg}; display:flex; align-items:center; justify-content:${o.j || 'flex-start'}; padding:0 8px; overflow:hidden; box-sizing:border-box;"><span style="font-family:${TEXTO}; font-weight:${o.w || 600}; font-size:${px(ajustar(txt, o.t || 22, w - 16, 0.41))}; line-height:1; color:${o.c}; white-space:nowrap;">${esc(txt)}</span></div>`;
     let nFila = 0;
@@ -848,7 +851,7 @@ function htmlPlanilla(pag, i, total, c) {
             return `<div style="height:${A.banda}px; width:${A.ancho}px; background:${p.bandBg}; display:flex; align-items:center; padding:0 14px; box-sizing:border-box;"><span style="font-family:${TEXTO}; font-weight:700; font-size:${px(ajustar(it.txt, 23, A.ancho - 28, 0.44))}; line-height:1; color:${p.bandTxt}; white-space:nowrap;">${esc(it.txt)}</span></div>`;
         }
         if (it.t === 'head') {
-            return `<div style="${grid} height:${A.head}px; background:${p.fondo};">${TITULOS_COLS.map((t, k) => celda(t, W[k], { bg: p.headBg, c: p.headTxt, w: 700, j: 'center', t: 21 })).join('')}</div>`;
+            return `<div style="${grid} height:${A.head}px; background:${p.fondo};">${TIT.map((t, k) => celda(t, W[k], { bg: p.headBg, c: p.headTxt, w: 700, j: 'center', t: 21 })).join('')}</div>`;
         }
         const bg = nFila++ % 2 === 0 ? p.rowA : p.rowB;
         const o = (extra) => ({ bg, c: p.txt, ...extra });
@@ -860,6 +863,7 @@ function htmlPlanilla(pag, i, total, c) {
             + celda(it.ap, W[4], o({}))
             + celda(it.a1, W[5], o({}))
             + celda(it.a2, W[6], o({}))
+            + (hay4 ? celda(it.a4, W[7], o({})) : '')
             + `</div>`;
     }).join('');
     const contador = total > 1 ? `<div style="position:absolute; right:14px; bottom:3px; font-family:${TITULAR}; font-size:18px; line-height:1; letter-spacing:0.06em; color:${p.bandTxt};">${i + 1}/${total}</div>` : '';
@@ -1869,7 +1873,7 @@ function aplicarPestana(p) {
 function actualizarDatalist() {
     const nombres = new Set();
     String(estado.nomina || '').split(/\r?\n/).forEach(s => { s = s.trim(); if (s) nombres.add(s); });
-    Object.values(estado.arbitros).forEach(a => ['ap', 'a1', 'a2'].forEach(c => { const v = String((a && a[c]) || '').trim(); if (v) nombres.add(v); }));
+    Object.values(estado.arbitros).forEach(a => ['ap', 'a1', 'a2', 'a4'].forEach(c => { const v = String((a && a[c]) || '').trim(); if (v) nombres.add(v); }));
     $('dl-arbitros').innerHTML = [...nombres].sort((x, y) => x.localeCompare(y, 'es')).map(n => `<option value="${esc(n)}"></option>`).join('');
 }
 
@@ -1900,6 +1904,9 @@ function construirListaArb() {
                 ${campo('a1', 'Asist. 1', 'Asistente 1', true)}
                 ${campo('a2', 'Asist. 2', 'Asistente 2', true)}
             </div>
+            ${(a.a4on || String(a.a4 || '').trim())
+                ? `<div class="mt-1.5 flex items-end gap-1.5"><div class="flex-1 min-w-0">${campo('a4', '4.º árbitro (opcional)', '4.º árbitro', true)}</div><button type="button" data-quitar4 class="btn-sec" title="Quitar el 4.º árbitro" aria-label="Quitar el 4.º árbitro">Quitar</button></div>`
+                : `<button type="button" data-agregar4 class="btn-sec mt-1.5">+ Agregar 4.º árbitro</button>`}
             <p class="arb-aviso hidden">Hay un árbitro repetido en este partido o en otro a la misma hora.</p>
         </div>`;
     });
@@ -1911,7 +1918,7 @@ function marcarConflictos() {
     const mal = new Set(), enHora = {};
     partidosArb.forEach(p => {
         const a = estado.arbitros[p.key] || {};
-        const nombres = [a.ap, a.a1, a.a2].map(normNombre).filter(Boolean);
+        const nombres = [a.ap, a.a1, a.a2, a.a4].map(normNombre).filter(Boolean);
         if (new Set(nombres).size < nombres.length) mal.add(p.key);
         if (!hayHora(p.hora)) return;
         nombres.forEach(n => { const k = `${p.fechaKey}|${p.hora}|${n}`; (enHora[k] = enHora[k] || []).push(p.key); });
@@ -1930,6 +1937,7 @@ async function renderArb(lista = true) {
     const paginas = repartirPlanilla(dias, A.cap);
     const total = paginas.length;
     const paleta = paletaPlanilla(estado.disenoArb);
+    const hay4 = dias.some(d => d.bandas.some(b => b.filas.some(f => f.a4)));
     const alto = Math.max(1, ...paginas.map(p => p.usado)) + (total > 1 ? A.pie : 0);
     const n = partidosArb.length;
     const sin = partidosArb.filter(p => !String((estado.arbitros[p.key] || {}).ap || '').trim()).length;
@@ -1940,7 +1948,7 @@ async function renderArb(lista = true) {
     $('btn-todos-arb').disabled = !total;
 
     vista = { ancho: A.ancho, alto, ratio: ARB_RATIO, fondo: paleta.fondo };
-    const htmls = paginas.map((p, i) => htmlPlanilla(p, i, total, { paleta, alto }));
+    const htmls = paginas.map((p, i) => htmlPlanilla(p, i, total, { paleta, alto, hay4 }));
     htmlsActuales = htmls;
 
     const cont = $('previews-arb');
@@ -2024,6 +2032,18 @@ function iniciarArbitros() {
         guardarEstado(); marcarConflictos(); renderDiferido(false);
     });
     $('lista-arb').addEventListener('change', actualizarDatalist);
+    // 4.º árbitro opcional: el botón muestra el casillero; "Quitar" lo borra
+    $('lista-arb').addEventListener('click', (e) => {
+        const add = e.target.closest('[data-agregar4]'), quitar = e.target.closest('[data-quitar4]');
+        if (!add && !quitar) return;
+        const pk = (add || quitar).closest('[data-pk]').dataset.pk;
+        const a = estado.arbitros[pk] || (estado.arbitros[pk] = {});
+        const sc = $('lista-arb').scrollTop;
+        if (add) a.a4on = true; else { a.a4on = false; a.a4 = ''; }
+        guardarEstado(); construirListaArb(); $('lista-arb').scrollTop = sc;
+        if (add) { const inp = document.querySelector(`#lista-arb [data-pk="${CSS.escape(pk)}"] [data-campo="a4"]`); if (inp) inp.focus(); }
+        else renderArb(false);
+    });
     $('btn-arb-limpiar').addEventListener('click', () => {
         if (!Object.keys(estado.arbitros).length) return;
         if (!confirm('¿Borrar los árbitros y canchas cargados en todos los partidos?')) return;
