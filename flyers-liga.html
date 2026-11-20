@@ -343,7 +343,7 @@
                     <h2 class="seccion-titulo !mb-0">Árbitros por partido</h2>
                     <button type="button" id="btn-arb-limpiar" class="btn-sec">Borrar todo</button>
                 </div>
-                <p class="campo-ayuda !mt-0 mb-3">Los partidos salen de la programación de arriba. Cargá el árbitro principal y los asistentes de cada uno (el 4.º árbitro es opcional: se agrega con el botón y la planilla suma esa columna solo si cargás alguno). La cancha se completa sola (la del local, la que va entre paréntesis o el "Local" del título) y la podés cambiar. Todo se guarda en este navegador.</p>
+                <p class="campo-ayuda !mt-0 mb-3">Los partidos salen de la programación de arriba. Cargá el árbitro principal y los asistentes de cada uno. La cancha se completa sola (la del local, la que va entre paréntesis o el "Local" del título) y la podés cambiar. Todo se guarda en este navegador.</p>
                 <div id="lista-arb" class="flex flex-col gap-2 max-h-[65vh] overflow-y-auto pr-1"></div>
                 <datalist id="dl-arbitros"></datalist>
             </section>
@@ -453,7 +453,7 @@
                     </div>
                 </div>
                 <textarea id="cr-texto" class="campo" rows="18" spellcheck="false" wrap="off" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre; font-size:0.74rem; font-weight:500; overflow:auto;" placeholder="COPA DE ORO:&#10;A: 1° ZONA NORTE: EQUIPO 1 VS 4° ZONA SUR: EQUIPO 2"></textarea>
-                <p class="campo-ayuda">Pegá los cruces tal cual te los mandan. Sale <b>un flyer por cada copa o categoría</b>. Cada cruce va en un renglón: <b>A: 1° ZONA NORTE: UNION SB VS 4° ZONA SUR: M. UGARTE</b>. Si un lugar todavía no está definido, separá las opciones con una barra (<b>AVENIDA FC/DEP. COMERCIO</b>) y se muestran las dos. Los títulos como <b>COPA DE ORO:</b> o <b>... CUARTOS DE FINAL EN SUB-20:</b> arman cada llave, y <b>A VS C</b> / <b>B VS D</b> definen las semifinales. <b>Día y hora</b> (opcionales): al final del cruce, <b>... – Sábado 14/11 – 16:00 Hs</b>, o en un renglón aparte para agregarlos después, <b>A: Sábado 14/11 – 16:00 Hs</b>. Lo mismo sirve para las semis (<b>A VS C – Domingo 22/11 – 16:00 Hs</b>) y para la final (<b>FINAL – Domingo 29/11 – 17:00 Hs</b>). <b>Resultado</b> (opcional): al final del cruce, <b>... – 2-1</b>, o en un renglón aparte, <b>A: 2-1</b>; el primer número es del primer equipo. Si hubo penales: <b>A: 1-1 (4-3 pen)</b>. Si no tenés el resultado, alcanza con <b>A: PASA M. UGARTE</b> (parte del nombre del que pasó). El equipo que pierde se oscurece.</p>
+                <p class="campo-ayuda">Pegá los cruces tal cual te los mandan. Sale <b>un flyer por cada copa o categoría</b>. Cada cruce va en un renglón: <b>A: 1° ZONA NORTE: UNION SB VS 4° ZONA SUR: M. UGARTE</b>. Si un lugar todavía no está definido, separá las opciones con una barra (<b>AVENIDA FC/DEP. COMERCIO</b>) y se muestran las dos. Los títulos como <b>COPA DE ORO:</b> o <b>... CUARTOS DE FINAL EN SUB-20:</b> arman cada llave, y <b>A VS C</b> / <b>B VS D</b> definen las semifinales. <b>Día y hora</b> (opcionales): al final del cruce, <b>... – Sábado 14/11 – 16:00 Hs</b>, o en un renglón aparte para agregarlos después, <b>A: Sábado 14/11 – 16:00 Hs</b>. Lo mismo sirve para las semis (<b>A VS C – Domingo 22/11 – 16:00 Hs</b>) y para la final (<b>FINAL – Domingo 29/11 – 17:00 Hs</b>). <b>Resultado</b> (opcional): al final del cruce, <b>... – 2-1</b>, o en un renglón aparte, <b>A: 2-1</b>; el primer número es del primer equipo. Si hubo penales: <b>A: 1-1 (4-3 pen)</b>. Si no tenés el resultado, alcanza con <b>A: PASA M. UGARTE</b> (parte del nombre del que pasó). El equipo que pierde se oscurece. En las semis podés sumar el local (<b>A VS C – local COOPERATIVA – Domingo 15/11 – 19:00 Hs</b>) y, cuando ya se sepan, los finalistas (<b>FINAL: EQUIPO 1 VS EQUIPO 2</b>). Si ya se jugó una semi, agregá <b>– PASA EQUIPO</b> o el resultado <b>– 2-1</b> al final de su renglón; si cargaste los finalistas, el eliminado de cada semi se oscurece solo.</p>
                 <p id="cr-avisos" class="arb-aviso hidden"></p>
             </section>
             <section class="seccion">
@@ -468,6 +468,10 @@
             <section class="seccion">
                 <h2 class="seccion-titulo">Diseño</h2>
                 <div id="cr-tiles-paleta" class="grid grid-cols-2 gap-2"></div>
+            </section>
+            <section class="seccion">
+                <h2 class="seccion-titulo">Estilo</h2>
+                <div id="cr-tiles-estilo" class="grid grid-cols-2 gap-2"></div>
             </section>
             <section class="seccion">
                 <h2 class="seccion-titulo">Formato</h2>
@@ -521,8 +525,8 @@
             <button type="button" id="visor-prev" class="btn-sec">‹ Anterior</button>
             <span id="visor-pos" class="text-xs font-extrabold px-1" style="color:#fff;"></span>
             <button type="button" id="visor-next" class="btn-sec">Siguiente ›</button>
-            <button type="button" id="visor-desc" class="btn-guardar" style="padding:0.5rem 1.1rem;">Descargar</button>
             <button type="button" id="visor-imp" class="btn-sec">Imprimir</button>
+            <button type="button" id="visor-desc" class="btn-guardar" style="padding:0.5rem 1.1rem;">Descargar</button>
             <button type="button" id="visor-cerrar" class="btn-sec">Cerrar</button>
         </div>
     </div>
@@ -534,7 +538,7 @@
     <script src="fuentes-liga.js"></script>
     <script src="imagekit-liga.js"></script>
     <script src="tabla-liga.js"></script>
-    <script src="cruces-liga.js?v=pasa"></script>
+    <script src="cruces-liga.js?v=semis-oscuras"></script>
     <script src="flyers-liga.js"></script>
 </body>
 </html>
