@@ -1427,22 +1427,33 @@ function imprimirImagenes(urls) {
         const marco = document.createElement('iframe');
         marco.id = 'marco-imprimir';
         marco.setAttribute('aria-hidden', 'true');
-        marco.style.cssText = 'position:fixed; right:0; bottom:0; width:0; height:0; border:0; visibility:hidden;';
+        // Fuera de pantalla pero con tamaño real (un iframe 0x0 o con visibility:hidden sale en blanco en varios navegadores)
+        marco.style.cssText = 'position:fixed; left:-10000px; top:0; width:297mm; height:210mm; border:0;';
         document.body.appendChild(marco);
         const doc = marco.contentWindow.document;
         doc.open();
         doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>Flyers A.F.O.CH</title><style>
-            @page { margin: 8mm; }
+            @page { size: A4 landscape; margin: 8mm; }
             html, body { margin: 0; padding: 0; }
-            .hoja { width: 100%; height: 99vh; display: flex; align-items: center; justify-content: center; break-after: page; page-break-after: always; }
+            .hoja { width: 100%; height: 193mm; display: flex; align-items: center; justify-content: center; break-after: page; page-break-after: always; overflow: hidden; }
             .hoja:last-child { break-after: auto; page-break-after: auto; }
-            img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+            img { display: block; max-width: 100%; max-height: 193mm; object-fit: contain; }
         </style></head><body>${urls.map(u => `<div class="hoja"><img src="${u}" alt=""></div>`).join('')}</body></html>`);
         doc.close();
-        const pendientes = [...doc.images].map(im => (im.complete ? null : new Promise(r => { im.onload = im.onerror = r; })));
-        Promise.all(pendientes).then(() => {
-            marco.contentWindow.focus();
-            marco.contentWindow.print();
+        const listas = [...doc.images].map(im => (im.decode ? im.decode().catch(() => null) : new Promise(r => { if (im.complete) r(); else im.onload = im.onerror = r; })));
+        Promise.all(listas).then(() => pausa(150)).then(() => {
+            try {
+                marco.contentWindow.focus();
+                marco.contentWindow.print();
+            } catch (err) {
+                console.error('print() falló en el marco, abro ventana aparte:', err);
+                const w = window.open('', '_blank');
+                if (w) {
+                    w.document.write(`<!doctype html><title>Flyers A.F.O.CH</title><style>@page{size:A4 landscape;margin:8mm}body{margin:0}img{display:block;max-width:100%;max-height:193mm;margin:0 auto;break-after:page}</style>${urls.map(u => `<img src="${u}">`).join('')}`);
+                    w.document.close();
+                    w.onload = () => w.print();
+                }
+            }
             resolve();
         });
     });
@@ -2693,7 +2704,8 @@ async function iniciar() {
     $('visor-prev').addEventListener('click', () => { visorIdx--; pintarVisor(); });
     $('visor-next').addEventListener('click', () => { visorIdx++; pintarVisor(); });
     $('visor-desc').addEventListener('click', (e) => { if (visorIdx >= 0) descargar([visorIdx], e.currentTarget); });
-    $('visor-imp').addEventListener('click', (e) => { if (visorIdx >= 0) imprimir([visorIdx], e.currentTarget); });
+    const visorImp = $('visor-imp');
+    if (visorImp) visorImp.addEventListener('click', (e) => { if (visorIdx >= 0) imprimir([visorIdx], e.currentTarget); });
     // Botón Imprimir de cada flyer (vale para Flyers, Resultados y Árbitros)
     document.addEventListener('click', (e) => {
         const b = e.target.closest('[data-imprimir]');
